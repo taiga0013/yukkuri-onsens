@@ -1,0 +1,2129 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>湯っくり — 新潟温泉混雑状況アプリ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Noto+Sans+JP:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy:        #0d1b2a;
+      --navy-2:      #162032;
+      --navy-3:      #1e2d42;
+      --navy-4:      #243650;
+      --blue:        #3d7ab5;
+      --blue-light:  #5a9fd4;
+      --blue-pale:   #b8d4ed;
+      --teal:        #2a8a7e;
+      --teal-light:  #3db8a8;
+      --beige:       #f0e8d8;
+      --white:       #ffffff;
+      --white-soft:  rgba(255,255,255,0.92);
+      --white-dim:   rgba(255,255,255,0.6);
+      --white-faint: rgba(255,255,255,0.15);
+      --gold:        #c8a96e;
+      --gold-light:  #e8c98e;
+      --red-hot:     #e05050;
+      --orange:      #e07830;
+      --green-ok:    #3ab86a;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+      --shadow:    0 4px 24px rgba(0,0,0,0.35);
+      --shadow-sm: 0 2px 12px rgba(0,0,0,0.25);
+      --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+      /* L1: チェックインUI位置をCSS変数で管理 */
+      --tabbar-h: 82px;
+      --toast-h:  44px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html {
+      height: 100%;
+      background: #080f18;
+    }
+    body {
+      height: 100%;
+      background: #080f18;
+      font-family: 'Noto Sans JP', sans-serif;
+      color: var(--white);
+      -webkit-font-smoothing: antialiased;
+      /* 横スクロール対応: body は横にスクロール可、縦は隠す */
+      overflow-x: auto;
+      overflow-y: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      min-width: 390px; /* app-frame 幅未満でも横スクロール可 */
+    }
+    .app-frame {
+      width: 390px;
+      height: 844px;
+      /* 幅が縮んでも 390px 以下にならないよう固定 */
+      min-width: 390px;
+      flex-shrink: 0;
+      margin: 0 auto;
+      position: relative;
+      background: var(--navy);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    @media (max-height: 860px) { .app-frame { height: 100vh; } }
+    /* 幅が 390px 以下のデバイスでは幅を画面幅に合わせる */
+    @media (max-width: 420px)  { .app-frame { width: 100vw; min-width: unset; } body { min-width: unset; } }
+
+    /* ─── ステータスバー ─── */
+    .status-bar {
+      height: 44px;
+      background: var(--navy);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+    .status-time { font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }
+    .status-icons { display: flex; gap: 6px; align-items: center; font-size: 12px; }
+
+    /* ─── スクロール領域 ─── */
+    .screen {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scroll-behavior: smooth;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen { scrollbar-width: none; }
+
+    /* ─── タブバー ─── */
+    .tab-bar {
+      height: var(--tabbar-h);
+      background: var(--navy-2);
+      border-top: 1px solid var(--white-faint);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-around;
+      padding-top: 10px;
+      flex-shrink: 0;
+      z-index: 100;
+    }
+    .tab-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 4px 16px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+      flex: 1;
+    }
+    .tab-item .tab-icon  { font-size: 22px; transition: var(--transition); filter: var(--tab-icon-filter, grayscale(1) brightness(0.5)); }
+    .tab-item .tab-label { font-size: 10px; font-weight: 500; color: var(--white-dim); transition: var(--transition); }
+    .tab-item.active .tab-icon  { filter: none; }
+    .tab-item.active .tab-label { color: var(--blue-light); }
+
+    /* ─── ページ ─── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── ヘッダー ─── */
+    .page-header {
+      padding: 16px 20px 12px;
+      background: var(--navy);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      border-bottom: 1px solid var(--white-faint);
+    }
+    .page-header h1 {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      background: linear-gradient(135deg, var(--gold-light), var(--blue-light));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header .subtitle { font-size: 11px; color: var(--white-dim); margin-top: 2px; letter-spacing: 0.05em; }
+
+    /* ─── ヒーローバナー ─── */
+    .hero-banner {
+      margin: 16px 20px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, #0d3a5c 0%, #1a6a88 50%, #0d4a4a 100%);
+      padding: 24px 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .hero-banner::before {
+      content: '';
+      position: absolute;
+      right: -20px; top: -20px;
+      width: 140px; height: 140px;
+      background: radial-gradient(circle, rgba(90,159,212,0.3) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-banner .badge {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--navy);
+      font-size: 10px; font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+    }
+    .hero-banner h2 {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 20px; font-weight: 700;
+      line-height: 1.4; margin-bottom: 8px;
+    }
+    .hero-banner p { font-size: 12px; color: var(--white-dim); line-height: 1.6; }
+    .hero-emoji { font-size: 48px; position: absolute; right: 20px; bottom: 16px; opacity: 0.8; }
+
+    /* ─── セクションタイトル ─── */
+    .section-title {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 16px; font-weight: 600;
+      color: var(--white);
+      letter-spacing: 0.04em;
+      margin: 0 20px 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--white-faint); }
+
+    /* ─── 温泉カード ─── */
+    .card-scroll {
+      display: flex; gap: 14px;
+      overflow-x: auto;
+      padding: 0 20px 8px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .card-scroll::-webkit-scrollbar { display: none; }
+    .onsen-card {
+      flex-shrink: 0; width: 190px;
+      background: var(--navy-3);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+    .onsen-card:active { transform: scale(0.97); }
+    .onsen-card .card-img {
+      width: 100%; height: 110px;
+      background: var(--navy-4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+    }
+    .onsen-card .card-body { padding: 10px 12px 12px; }
+    .onsen-card .card-name {
+      font-size: 13px; font-weight: 600; margin-bottom: 4px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .onsen-card .card-area { font-size: 11px; color: var(--white-dim); margin-bottom: 8px; }
+    /* C2: card-fav はインライン onclick から呼ばれるが再描画前提でbtnは使わない */
+    .card-fav {
+      position: absolute; top: 4px; right: 4px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 50%;
+      width: 44px; height: 44px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      cursor: pointer; border: none; color: white;
+      transition: var(--transition);
+    }
+    .card-fav.active { color: #ff6b6b; }
+
+    /* ─── 混雑バッジ ─── */
+    .congestion-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .congestion-badge.empty   { background: rgba(58,184,106,0.18); color: var(--green-ok);   border: 1px solid rgba(58,184,106,0.3); }
+    .congestion-badge.normal  { background: rgba(61,122,181,0.18); color: var(--blue-light); border: 1px solid rgba(61,122,181,0.3); }
+    .congestion-badge.busy    { background: rgba(224,120,48,0.18); color: var(--orange);     border: 1px solid rgba(224,120,48,0.3); }
+    .congestion-badge.crowded { background: rgba(224,80,80,0.18);  color: var(--red-hot);    border: 1px solid rgba(224,80,80,0.3); }
+    .congestion-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; animation: pulse-dot 2s infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    /* ─── リストカード ─── */
+    .list-cards { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+    .list-card {
+      background: var(--navy-3); border-radius: var(--radius-md);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; transition: var(--transition);
+      border: 1px solid var(--white-faint);
+    }
+    .list-card:active { transform: scale(0.98); }
+    .list-card .list-img {
+      width: 54px; height: 54px;
+      border-radius: var(--radius-sm);
+      background: var(--navy-4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; flex-shrink: 0;
+    }
+    .list-card .list-body { flex: 1; min-width: 0; }
+    .list-card .list-name  { font-size: 14px; font-weight: 600; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .list-card .list-area  { font-size: 11px; color: var(--white-dim); margin-bottom: 6px; }
+    .list-card .list-meta  { display: flex; align-items: center; gap: 8px; }
+    .list-rank {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold-light));
+      color: var(--navy); font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .list-rank.rank-2 { background: linear-gradient(135deg, #b0b8c0, #dce4ec); }
+    .list-rank.rank-3 { background: linear-gradient(135deg, #c8894e, #e8b87e); }
+
+    /* ─── 探す画面 ─── */
+    .search-bar { margin: 16px 20px 0; position: relative; }
+    .search-bar input {
+      width: 100%;
+      background: var(--navy-3);
+      border: 1px solid var(--white-faint);
+      border-radius: var(--radius-md);
+      color: var(--white);
+      font-size: 14px;
+      padding: 12px 40px 12px 42px; /* H1: 右40pxでブラウザ標準✕ボタンと干渉しない */
+      outline: none;
+      transition: var(--transition);
+      /* H1: ブラウザ標準クリアボタンを非表示にして絵文字アイコンのみ使用 */
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .search-bar input::-webkit-search-cancel-button { display: none; }
+    .search-bar input:focus { border-color: var(--blue-light); }
+    .search-bar input::placeholder { color: var(--white-dim); }
+    .search-bar .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+    /* H1: 独自クリアボタン */
+    .search-clear {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+      font-size: 14px; cursor: pointer; opacity: 0.5;
+      display: none; background: none; border: none; color: var(--white);
+      padding: 4px;
+    }
+    .search-bar input:not(:placeholder-shown) ~ .search-clear { display: block; }
+
+    /* ─── フィルターチップ ─── */
+    .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 20px; scrollbar-width: none; }
+    .filter-chips::-webkit-scrollbar { display: none; }
+    .chip {
+      flex-shrink: 0; padding: 7px 14px; border-radius: 20px;
+      font-size: 12px; font-weight: 500;
+      border: 1px solid var(--white-faint); color: var(--white-dim);
+      cursor: pointer; transition: var(--transition); background: transparent;
+    }
+    .chip.active { background: var(--blue); border-color: var(--blue); color: var(--white); }
+
+    /* ─── マップビュー ─── */
+    .map-view {
+      margin: 0 20px 16px;
+      border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, #0a2030 0%, #0d3050 50%, #102040 100%);
+      height: 200px;
+      position: relative; overflow: hidden;
+      border: 1px solid var(--white-faint);
+      box-shadow: var(--shadow-sm);
+    }
+    .map-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(61,122,181,0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(61,122,181,0.1) 1px, transparent 1px);
+      background-size: 30px 30px;
+    }
+    .map-road-h { position: absolute; height: 2px; background: rgba(61,122,181,0.25); left: 0; right: 0; }
+    .map-road-v { position: absolute; width: 2px;  background: rgba(61,122,181,0.25); top: 0; bottom: 0; }
+    .map-pin { position: absolute; display: flex; flex-direction: column; align-items: center; cursor: pointer; transform: translate(-50%,-100%); }
+    .map-pin .pin-bubble {
+      background: var(--navy-2); border: 2px solid var(--blue-light);
+      border-radius: var(--radius-sm); padding: 3px 8px;
+      font-size: 10px; font-weight: 600; white-space: nowrap;
+      margin-bottom: 4px; box-shadow: var(--shadow-sm);
+    }
+    .map-pin .pin-dot { width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 8px rgba(61,122,181,0.8); }
+    .map-pin.empty   .pin-dot { background: var(--green-ok); }
+    .map-pin.normal  .pin-dot { background: var(--blue-light); }
+    .map-pin.busy    .pin-dot { background: var(--orange); }
+    .map-pin.crowded .pin-dot { background: var(--red-hot); }
+    .map-user { position: absolute; width: 16px; height: 16px; border-radius: 50%; background: var(--blue-light); border: 3px solid white; box-shadow: 0 0 0 6px rgba(90,159,212,0.2); transform: translate(-50%,-50%); }
+    .map-user-label { position: absolute; font-size: 9px; color: var(--blue-light); font-weight: 600; transform: translate(-50%,12px); white-space: nowrap; }
+
+    /* ─── 混雑状況 ─── */
+    .congestion-list { padding: 0 20px; display: flex; flex-direction: column; gap: 12px; }
+    .congestion-card {
+      background: var(--navy-3); border-radius: var(--radius-md);
+      padding: 16px; border: 1px solid var(--white-faint);
+      cursor: pointer; transition: var(--transition);
+    }
+    .congestion-card:active { transform: scale(0.98); }
+    .congestion-card.checked-in { border-color: var(--blue-light); background: rgba(61,122,181,0.1); }
+    .congestion-card .cc-header { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .cc-emoji { font-size: 28px; }
+    .cc-info { flex: 1; }
+    .cc-name { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+    .cc-area { font-size: 11px; color: var(--white-dim); }
+    .cc-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
+    .cc-stat { background: var(--navy-4); border-radius: var(--radius-sm); padding: 8px; text-align: center; }
+    .cc-stat .stat-val { font-size: 18px; font-weight: 700; color: var(--blue-light); line-height: 1; margin-bottom: 3px; }
+    .cc-stat .stat-label { font-size: 9px; color: var(--white-dim); }
+    .cc-footer { display: flex; align-items: center; justify-content: space-between; }
+    .cc-updated { font-size: 10px; color: var(--white-dim); }
+    .checkin-badge { background: linear-gradient(135deg,var(--blue),var(--teal)); color: white; font-size: 10px; font-weight: 600; padding: 4px 10px; border-radius: 12px; letter-spacing: 0.04em; }
+
+    /* ─── マイページ ─── */
+    .mypage-header {
+      padding: 20px;
+      background: linear-gradient(180deg, var(--navy-2) 0%, var(--navy) 100%);
+      text-align: center; border-bottom: 1px solid var(--white-faint);
+    }
+    .avatar { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg,var(--blue),var(--teal)); margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; font-size: 32px; box-shadow: 0 0 0 3px rgba(90,159,212,0.3); }
+    .user-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+    .user-sub  { font-size: 12px; color: var(--white-dim); }
+    .stats-row { display: flex; justify-content: center; gap: 24px; margin-top: 16px; }
+    .stat-item { text-align: center; }
+    .stat-item .num { font-size: 20px; font-weight: 700; color: var(--blue-light); }
+    .stat-item .lbl { font-size: 10px; color: var(--white-dim); }
+    .menu-section { padding: 16px 20px 0; }
+    .menu-section-title { font-size: 11px; color: var(--white-dim); letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+    .menu-items { background: var(--navy-3); border-radius: var(--radius-md); overflow: hidden; }
+    .menu-item { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-bottom: 1px solid var(--white-faint); cursor: pointer; transition: var(--transition); }
+    .menu-item:last-child { border-bottom: none; }
+    .menu-item:active { background: var(--white-faint); }
+    .menu-item .mi-icon  { font-size: 18px; width: 24px; text-align: center; }
+    .menu-item .mi-label { flex: 1; font-size: 14px; }
+    .menu-item .mi-arrow { color: var(--white-dim); font-size: 12px; }
+    .menu-item .mi-toggle {
+      width: 44px; height: 26px; border-radius: 13px;
+      background: var(--navy-4);
+      position: relative; cursor: pointer; transition: var(--transition); border: none;
+    }
+    .menu-item .mi-toggle.on { background: var(--blue); }
+    .menu-item .mi-toggle::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 3px; left: 3px; transition: var(--transition); }
+    .menu-item .mi-toggle.on::after { left: 21px; }
+
+    /* ─── GPS通知バー (L2: z-index を modal より上に) ─── */
+    .gps-notice {
+      position: absolute; top: 0; left: 0; right: 0;
+      background: linear-gradient(135deg, var(--blue), var(--teal));
+      padding: 10px 16px;
+      display: flex; align-items: center; gap: 10px;
+      z-index: 350; /* L2: modal-overlay(300) より上 */
+      transform: translateY(-100%);
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+    .gps-notice.show { transform: translateY(0); }
+    .gps-notice .gn-icon  { font-size: 20px; }
+    .gps-notice .gn-text  { font-size: 13px; font-weight: 500; flex: 1; }
+    .gps-notice .gn-close { font-size: 18px; cursor: pointer; opacity: 0.7; }
+
+    /* ─── チェックインインジケーター (L1: CSS変数で位置計算) ─── */
+    .checkin-indicator {
+      position: absolute;
+      /* L1: タブバー + トースト高さ + 余白 */
+      bottom: calc(var(--tabbar-h) + var(--toast-h) + 24px);
+      left: 50%; transform: translateX(-50%);
+      background: linear-gradient(135deg, var(--blue), var(--teal));
+      border-radius: var(--radius-xl);
+      padding: 12px 20px;
+      display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--shadow);
+      z-index: 150;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      white-space: nowrap;
+    }
+    .checkin-indicator.show { opacity: 1; pointer-events: auto; }
+    .ci-dot { width: 10px; height: 10px; border-radius: 50%; background: white; animation: pulse-dot 1.5s infinite; }
+    .ci-text { font-size: 13px; font-weight: 600; }
+
+    /* ─── 詳細モーダル ─── */
+    .modal-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 300;
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+      /* シートが上にはみ出さないよう overflow を hidden に */
+      overflow: hidden;
+    }
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
+    .modal-sheet {
+      width: 100%; background: var(--navy-2);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: 20px 20px 40px;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+      /* app-frame(844px) の 88% を上限に。overflow:hidden で上端がクリップされる */
+      max-height: 88%;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      /* flex アイテムが縮まないよう */
+      flex-shrink: 0;
+    }
+    .modal-overlay.show .modal-sheet { transform: translateY(0); }
+    .modal-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--white-dim); margin: 0 auto 20px; }
+    .modal-title  { font-family: 'Noto Serif JP', serif; font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .modal-area   { font-size: 12px; color: var(--white-dim); margin-bottom: 16px; }
+    .modal-img    { width: 100%; height: 150px; border-radius: var(--radius-md); background: var(--navy-3); display: flex; align-items: center; justify-content: center; font-size: 60px; margin-bottom: 16px; }
+    .modal-stats  { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+    .modal-stat   { background: var(--navy-3); border-radius: var(--radius-sm); padding: 12px 8px; text-align: center; }
+    .modal-stat .ms-val   { font-size: 20px; font-weight: 700; color: var(--blue-light); margin-bottom: 4px; }
+    .modal-stat .ms-label { font-size: 10px; color: var(--white-dim); }
+    .modal-features { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .feature-tag  { background: var(--navy-4); border: 1px solid var(--white-faint); border-radius: 20px; padding: 5px 12px; font-size: 11px; color: var(--white-dim); }
+    .modal-desc   { font-size: 13px; color: var(--white-dim); line-height: 1.7; margin-bottom: 20px; }
+    .modal-btn    { width: 100%; padding: 14px; border-radius: var(--radius-md); background: linear-gradient(135deg,var(--blue),var(--teal)); color: white; font-size: 15px; font-weight: 600; border: none; cursor: pointer; font-family: inherit; transition: var(--transition); }
+    .modal-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+    /* ─── ソートバー ─── */
+    .sort-bar { display: flex; gap: 8px; padding: 12px 20px; overflow-x: auto; scrollbar-width: none; }
+    .sort-bar::-webkit-scrollbar { display: none; }
+    .sort-btn { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 500; border: 1px solid var(--white-faint); color: var(--white-dim); cursor: pointer; transition: var(--transition); background: transparent; }
+    .sort-btn.active { background: var(--navy-3); border-color: var(--blue-light); color: var(--blue-light); }
+
+    /* ─── ローディング ─── */
+    .loading-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--blue-light); animation: pulse-dot 1.4s infinite; }
+    .loading-dot:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    .section { margin-bottom: 24px; }
+    .pb-safe { height: 16px; }
+
+    /* ─── ログインモーダル ─── */
+    .login-modal-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 500;
+      display: flex; align-items: flex-end;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .login-modal-overlay.show { opacity: 1; pointer-events: auto; }
+    .login-sheet {
+      width: 100%; background: var(--navy-2);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: 24px 24px 48px;
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.4,0,0.2,1);
+    }
+    .login-modal-overlay.show .login-sheet { transform: translateY(0); }
+    .login-handle { width: 36px; height: 4px; border-radius: 2px; background: var(--white-dim); margin: 0 auto 28px; }
+    .login-logo   { text-align: center; font-size: 44px; margin-bottom: 10px; }
+    .login-title  {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 22px; font-weight: 700; text-align: center; margin-bottom: 6px;
+      background: linear-gradient(135deg, var(--gold-light), var(--blue-light));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .login-sub    { font-size: 12px; color: var(--white-dim); text-align: center; margin-bottom: 32px; line-height: 1.6; }
+    .login-btn {
+      width: 100%; padding: 15px 20px; border-radius: var(--radius-md);
+      font-size: 15px; font-weight: 600; border: none; cursor: pointer; font-family: inherit;
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      transition: var(--transition); margin-bottom: 12px;
+    }
+    .login-btn:active { transform: scale(0.97); opacity: 0.9; }
+    .login-btn.apple  { background: #ffffff; color: #000000; }
+    .login-btn.google { background: var(--navy-3); color: var(--white); border: 1px solid var(--white-faint); }
+    .login-btn .btn-icon { font-size: 20px; }
+    .login-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+    .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--white-faint); }
+    .login-divider span { font-size: 11px; color: var(--white-dim); }
+    .login-skip  { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--white-faint); border-radius: var(--radius-md); color: var(--white-dim); font-size: 13px; font-family: inherit; cursor: pointer; transition: var(--transition); }
+    .login-skip:active { background: var(--white-faint); }
+    .login-terms { font-size: 10px; color: var(--white-dim); text-align: center; margin-top: 16px; line-height: 1.6; }
+    .provider-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--navy-3); border: 1px solid var(--white-faint);
+      border-radius: 20px; padding: 4px 12px;
+      font-size: 11px; color: var(--white-dim); margin-top: 8px;
+    }
+
+    /* ─── GPS設定パネル ─── */
+    .gps-panel { margin: 0 20px 16px; background: var(--navy-3); border-radius: var(--radius-md); padding: 14px 16px; border: 1px solid rgba(61,122,181,0.3); }
+    .gps-panel .gp-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .gps-panel .gp-icon   { font-size: 20px; }
+    .gps-panel .gp-title  { font-size: 14px; font-weight: 600; flex: 1; }
+    .gps-panel .gp-status { font-size: 11px; color: var(--green-ok); font-weight: 600; }
+    .gps-panel .gp-coords { font-size: 11px; color: var(--white-dim); font-family: monospace; }
+
+    /* ─── 履歴 ─── */
+    .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--white-faint); }
+    .history-item .hi-emoji { font-size: 22px; }
+    .history-item .hi-body  { flex: 1; }
+    .history-item .hi-name  { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .history-item .hi-date  { font-size: 11px; color: var(--white-dim); }
+    .history-item .hi-duration { font-size: 11px; color: var(--blue-light); }
+
+    /* ─── アニメーション ─── */
+    @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+    .fade-in { animation: fadeInUp 0.4s ease forwards; }
+
+    /* ─── AI予測 ─── */
+    .ai-prediction {
+      margin: 0 20px 16px;
+      background: linear-gradient(135deg, rgba(42,138,126,0.15), rgba(61,122,181,0.15));
+      border: 1px solid rgba(42,138,126,0.3);
+      border-radius: var(--radius-md); padding: 14px 16px;
+    }
+    .ai-prediction .ap-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .ai-prediction .ap-title  { font-size: 12px; font-weight: 600; color: var(--teal-light); }
+    .ai-chart  { display: flex; align-items: flex-end; gap: 4px; height: 40px; }
+    .ai-bar    { flex: 1; border-radius: 3px 3px 0 0; background: rgba(90,159,212,0.4); transition: var(--transition); }
+    .ai-bar.peak { background: rgba(224,120,48,0.6); }
+    .ai-bar.now  { background: rgba(90,159,212,0.8); border: 1px solid var(--blue-light); }
+    .ai-labels { display: flex; gap: 4px; margin-top: 4px; }
+    .ai-label  { flex: 1; text-align: center; font-size: 8px; color: var(--white-dim); }
+
+    /* ─── 口コミ機能 ─── */
+    .modal-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 16px;
+      background: var(--navy-3);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+    }
+    .modal-tab {
+      flex: 1;
+      padding: 8px 0;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--white-dim);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+    .modal-tab.active {
+      background: var(--navy-2);
+      color: var(--white);
+      box-shadow: var(--shadow-sm);
+    }
+    .modal-tab-panel { display: none; }
+    .modal-tab-panel.active { display: block; }
+
+    /* 星評価 */
+    .star-rating {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .star-btn {
+      font-size: 26px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      line-height: 1;
+      transition: transform 0.15s;
+      filter: grayscale(1) brightness(0.4);
+    }
+    .star-btn.active { filter: none; }
+    .star-btn:hover  { transform: scale(1.2); filter: none; }
+
+    /* 口コミ投稿フォーム */
+    .review-form {
+      background: var(--navy-3);
+      border-radius: var(--radius-md);
+      padding: 14px;
+      margin-bottom: 16px;
+      border: 1px solid var(--white-faint);
+    }
+    .review-form-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--white);
+    }
+    .review-textarea {
+      width: 100%;
+      background: var(--navy-4);
+      border: 1px solid var(--white-faint);
+      border-radius: var(--radius-sm);
+      color: var(--white);
+      font-size: 13px;
+      font-family: inherit;
+      padding: 10px 12px;
+      resize: none;
+      outline: none;
+      height: 72px;
+      transition: var(--transition);
+      margin-bottom: 10px;
+    }
+    .review-textarea:focus { border-color: var(--blue-light); }
+    .review-textarea::placeholder { color: var(--white-dim); }
+    .review-submit {
+      width: 100%;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, var(--blue), var(--teal));
+      color: white;
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    .review-submit:active { opacity: 0.85; transform: scale(0.98); }
+    .review-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* 口コミカード */
+    .review-summary {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--navy-3);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 12px;
+      border: 1px solid var(--white-faint);
+    }
+    .review-avg {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--gold-light);
+      line-height: 1;
+    }
+    .review-avg-label { font-size: 10px; color: var(--white-dim); margin-top: 2px; }
+    .review-stars-disp { font-size: 16px; letter-spacing: 1px; }
+    .review-count { font-size: 11px; color: var(--white-dim); margin-top: 2px; }
+
+    .review-card {
+      background: var(--navy-3);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      margin-bottom: 10px;
+      border: 1px solid var(--white-faint);
+    }
+    .review-card-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .review-avatar {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--blue), var(--teal));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .review-meta { flex: 1; }
+    .review-author { font-size: 12px; font-weight: 600; }
+    .review-date   { font-size: 10px; color: var(--white-dim); }
+    .review-stars  { font-size: 13px; letter-spacing: 1px; }
+    .review-text   { font-size: 12px; color: var(--white-dim); line-height: 1.6; }
+    .review-helpful {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--white-dim);
+      cursor: pointer;
+      background: none;
+      border: 1px solid var(--white-faint);
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    .review-helpful:hover { border-color: var(--blue-light); color: var(--blue-light); }
+    .review-helpful.liked { border-color: var(--blue-light); color: var(--blue-light); }
+    .review-empty {
+      text-align: center;
+      padding: 32px 0 16px;
+      color: var(--white-dim);
+      font-size: 13px;
+    }
+    .review-empty-icon { font-size: 36px; margin-bottom: 8px; }
+
+    /* ─── 性別選択 ─── */
+    .gender-select {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+    }
+    .gender-btn {
+      flex: 1;
+      padding: 8px 0;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--white-faint);
+      background: transparent;
+      color: var(--white-dim);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .gender-btn.active {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: var(--white);
+    }
+
+    /* ─── 男女別混雑 ─── */
+    .gender-congestion {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .gc-card {
+      background: var(--navy-4);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      text-align: center;
+    }
+    .gc-label { font-size: 11px; color: var(--white-dim); margin-bottom: 4px; }
+    .gc-val   { font-size: 16px; font-weight: 700; color: var(--blue-light); }
+    .gc-bar-wrap { height: 4px; background: var(--navy-3); border-radius: 2px; margin-top: 6px; }
+    .gc-bar { height: 4px; border-radius: 2px; background: var(--blue-light); transition: width 0.4s; }
+    .gc-bar.female { background: #e08a9a; }
+
+    /* ─── トースト ─── */
+    #toast {
+      position: absolute;
+      bottom: calc(var(--tabbar-h) + 12px);
+      left: 50%; transform: translateX(-50%);
+      background: var(--navy-2); border: 1px solid var(--white-faint);
+      border-radius: var(--radius-md); padding: 10px 18px;
+      font-size: 13px; font-weight: 500; white-space: nowrap;
+      box-shadow: var(--shadow);
+      opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 400;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-frame" id="app">
+
+  <!-- ステータスバー -->
+  <div class="status-bar">
+    <span class="status-time" id="status-time">10:24</span>
+    <div class="status-icons">
+      <span id="gps-icon">📡</span>
+      <span>●●●</span>
+      <span>WiFi</span>
+      <span>🔋</span>
+    </div>
+  </div>
+
+  <!-- GPS通知バー -->
+  <div class="gps-notice" id="gps-notice">
+    <span class="gn-icon">♨️</span>
+    <span class="gn-text" id="gps-notice-text">GPS取得中...</span>
+    <span class="gn-close" onclick="hideGpsNotice()">✕</span>
+  </div>
+
+  <!-- メインスクリーン -->
+  <div class="screen" id="screen">
+
+    <!-- ホーム -->
+    <div class="page active fade-in" id="page-home">
+      <div class="page-header">
+        <h1>♨️ 湯っくり</h1>
+        <div class="subtitle">新潟県 温泉混雑状況 リアルタイム</div>
+      </div>
+      <div class="hero-banner" id="hero-banner">
+        <div class="badge" id="hero-badge">🌟 季節おすすめ</div>
+        <h2 id="hero-title"></h2>
+        <p id="hero-sub"></p>
+        <div class="hero-emoji" id="hero-emoji"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">⭐ おすすめ温泉</div>
+        <div class="card-scroll" id="home-recommend"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">✅ 今すぐ入れる</div>
+        <div class="card-scroll" id="home-empty"></div>
+      </div>
+      <div class="section">
+        <div class="section-title">🏆 人気ランキング</div>
+        <div class="list-cards" id="home-ranking"></div>
+      </div>
+      <div class="pb-safe"></div>
+    </div>
+
+    <!-- 探す -->
+    <div class="page" id="page-search">
+      <div class="page-header">
+        <h1>🔍 探す</h1>
+        <div class="subtitle">エリア・条件から温泉を探す</div>
+      </div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="search" id="search-input"
+          placeholder="温泉名・エリアで検索..."
+          oninput="debouncedSearch()"
+          onkeydown="if(event.key==='Enter'){this.blur();renderSearch();}"
+          enterkeyhint="search"
+          aria-label="温泉を検索">
+        <button class="search-clear" onclick="clearSearch()" aria-label="検索をクリア">✕</button>
+      </div>
+      <div class="filter-chips" id="filter-chips">
+        <button class="chip active" onclick="setFilter('all',this)">すべて</button>
+        <button class="chip" onclick="setFilter('empty',this)">🟢 空いている</button>
+        <button class="chip" onclick="setFilter('sauna',this)">🧖 サウナあり</button>
+        <button class="chip" onclick="setFilter('outdoor',this)">🌿 露天風呂</button>
+        <button class="chip" onclick="setFilter('niigata',this)">📍 新潟市</button>
+        <button class="chip" onclick="setFilter('yuzawa',this)">⛷️ 湯沢</button>
+        <button class="chip" onclick="setFilter('sado',this)">🏝️ 佐渡</button>
+        <button class="chip" onclick="setFilter('myoko',this)">🗻 妙高</button>
+      </div>
+      <div class="map-view" id="map-view">
+        <div class="map-grid"></div>
+        <div class="map-road-h" style="top:50%"></div>
+        <div class="map-road-h" style="top:30%"></div>
+        <div class="map-road-h" style="top:70%"></div>
+        <div class="map-road-v" style="left:35%"></div>
+        <div class="map-road-v" style="left:65%"></div>
+        <div id="map-pins"></div>
+        <div class="map-user" id="map-user" style="left:50%;top:55%"></div>
+        <div class="map-user-label" id="map-user-label" style="left:50%;top:55%">現在地</div>
+      </div>
+      <div class="list-cards" id="search-list"></div>
+      <div class="pb-safe"></div>
+    </div>
+
+    <!-- 混雑状況 -->
+    <div class="page" id="page-congestion">
+      <div class="page-header">
+        <h1>📊 混雑状況</h1>
+        <div class="subtitle">リアルタイム更新 <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></div>
+      </div>
+      <div class="ai-prediction">
+        <div class="ap-header"><span>🤖</span><span class="ap-title">AI混雑予測 — 今日の傾向</span></div>
+        <div class="ai-chart" id="ai-chart"></div>
+        <div class="ai-labels" id="ai-labels"></div>
+      </div>
+      <div class="sort-bar">
+        <button class="sort-btn active" onclick="setSortMode('dist',this)">📍 距離順</button>
+        <button class="sort-btn" onclick="setSortMode('empty',this)">✅ 空き順</button>
+        <button class="sort-btn" onclick="setSortMode('busy',this)">🔥 混雑順</button>
+        <button class="sort-btn" onclick="setSortMode('fav',this)">❤️ お気に入り</button>
+      </div>
+      <div class="congestion-list" id="congestion-list"></div>
+      <div class="pb-safe"></div>
+    </div>
+
+    <!-- マイページ -->
+    <div class="page" id="page-mypage">
+      <div class="mypage-header">
+        <div class="avatar">🧖</div>
+        <div class="user-name" id="mp-username">湯っくりユーザー</div>
+        <div class="user-sub" id="mp-user-sub">新潟温泉ファン</div>
+        <div id="mp-provider-badge"></div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="num" id="mp-visits">0</div>
+            <div class="lbl">訪問回数</div>
+          </div>
+          <div class="stat-item">
+            <div class="num" id="mp-favs">0</div>
+            <div class="lbl">お気に入り</div>
+          </div>
+          <div class="stat-item">
+            <div class="num" id="mp-reviews">0</div>
+            <div class="lbl">レビュー数</div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:16px 0 0;">
+        <div class="gps-panel">
+          <div class="gp-header">
+            <span class="gp-icon">📡</span>
+            <span class="gp-title">GPS位置情報</span>
+            <span class="gp-status" id="gps-status-text">取得中...</span>
+          </div>
+          <div class="gp-coords" id="gps-coords">緯度: --  経度: --</div>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">🕐 最近行った温泉</div>
+        <div id="history-list"></div>
+      </div>
+      <div class="menu-section">
+        <div class="menu-section-title">設定</div>
+        <div class="menu-items">
+          <div class="menu-item">
+            <span class="mi-icon">📡</span>
+            <span class="mi-label">GPSバックグラウンド追跡</span>
+            <button class="mi-toggle on" id="toggle-gps" onclick="toggleSetting(this)" aria-label="GPS追跡"></button>
+          </div>
+          <div class="menu-item">
+            <span class="mi-icon">🔔</span>
+            <span class="mi-label">プッシュ通知</span>
+            <button class="mi-toggle" id="toggle-notif" onclick="toggleSetting(this)" aria-label="プッシュ通知"></button>
+          </div>
+          <div class="menu-item">
+            <span class="mi-icon">🌙</span>
+            <span class="mi-label">ダークモード</span>
+            <button class="mi-toggle on" id="toggle-dark" onclick="toggleSetting(this)" aria-label="ダークモード"></button>
+          </div>
+        </div>
+      </div>
+      <div class="menu-section" style="padding-bottom:16px;">
+        <div class="menu-section-title">アカウント</div>
+        <div class="menu-items" id="account-menu-items"></div>
+      </div>
+      <div class="pb-safe"></div>
+    </div>
+
+  </div><!-- /screen -->
+
+  <!-- チェックインインジケーター -->
+  <div class="checkin-indicator" id="checkin-indicator">
+    <div class="ci-dot"></div>
+    <span class="ci-text" id="ci-text">♨️ チェックイン中</span>
+  </div>
+
+  <!-- タブバー -->
+  <div class="tab-bar" role="tablist" aria-label="メインナビゲーション">
+    <div class="tab-item active" role="tab" aria-selected="true" tabindex="0"
+      onclick="switchTab('home',this)" onkeydown="if(event.key==='Enter'||event.key===' ')switchTab('home',this)">
+      <span class="tab-icon" aria-hidden="true">🏠</span><span class="tab-label">ホーム</span>
+    </div>
+    <div class="tab-item" role="tab" aria-selected="false" tabindex="-1"
+      onclick="switchTab('search',this)" onkeydown="if(event.key==='Enter'||event.key===' ')switchTab('search',this)">
+      <span class="tab-icon" aria-hidden="true">🔍</span><span class="tab-label">探す</span>
+    </div>
+    <div class="tab-item" role="tab" aria-selected="false" tabindex="-1"
+      onclick="switchTab('congestion',this)" onkeydown="if(event.key==='Enter'||event.key===' ')switchTab('congestion',this)">
+      <span class="tab-icon" aria-hidden="true">📊</span><span class="tab-label">混雑状況</span>
+    </div>
+    <div class="tab-item" role="tab" aria-selected="false" tabindex="-1"
+      onclick="switchTab('mypage',this)" onkeydown="if(event.key==='Enter'||event.key===' ')switchTab('mypage',this)">
+      <span class="tab-icon" aria-hidden="true">👤</span><span class="tab-label">マイページ</span>
+    </div>
+  </div>
+
+  <!-- M5: ログインモーダル (role="dialog" + aria-modal 追加) -->
+  <div class="login-modal-overlay" id="login-modal-overlay" onclick="closeLoginModalOnBg(event)">
+    <div class="login-sheet" role="dialog" aria-modal="true" aria-label="湯っくりにログイン">
+      <div class="login-handle"></div>
+      <div class="login-logo">♨️</div>
+      <div class="login-title">湯っくりにログイン</div>
+      <div class="login-sub">ログインするとお気に入りや訪問履歴が<br>どのデバイスでも同期されます</div>
+      <button class="login-btn apple" onclick="doLogin('apple')">
+        <span class="btn-icon">&#63743;</span>Appleでサインイン
+      </button>
+      <button class="login-btn google" onclick="doLogin('google')">
+        <span class="btn-icon" style="font-size:18px;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#fff;border-radius:50%;color:#4285F4;font-weight:900;font-family:sans-serif;">G</span>
+        Googleでサインイン
+      </button>
+      <div class="login-divider"><span>または</span></div>
+      <button class="login-skip" onclick="closeLoginModal()">ゲストとして続ける</button>
+      <div class="login-terms">ログインすることで<u>利用規約</u>および<u>プライバシーポリシー</u>に同意したものとみなします</div>
+    </div>
+  </div>
+
+  <!-- 詳細モーダル -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModalOnBg(event)">
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-area"  id="modal-area"></div>
+      <div class="modal-img"   id="modal-img"></div>
+
+      <!-- タブ切り替え -->
+      <div class="modal-tabs">
+        <button class="modal-tab active" id="tab-btn-info"   onclick="switchModalTab('info')">📋 基本情報</button>
+        <button class="modal-tab"        id="tab-btn-review" onclick="switchModalTab('review')">💬 口コミ</button>
+      </div>
+
+      <!-- 基本情報タブ -->
+      <div class="modal-tab-panel active" id="tab-info">
+        <div class="modal-stats"    id="modal-stats"></div>
+        <div class="modal-features" id="modal-features"></div>
+        <div class="modal-desc"     id="modal-desc"></div>
+        <button class="modal-btn" id="modal-fav-btn" style="margin-bottom:10px;"></button>
+        <button class="modal-btn" id="modal-close-btn" onclick="closeModal()"
+          style="background:transparent;border:1px solid var(--white-faint);color:var(--white-dim);">閉じる</button>
+      </div>
+
+      <!-- 口コミタブ -->
+      <div class="modal-tab-panel" id="tab-review">
+        <div id="review-summary"></div>
+        <!-- 投稿フォーム -->
+        <div class="review-form">
+          <div class="review-form-title">✍️ 口コミを書く</div>
+          <div class="star-rating" id="star-rating">
+            <button class="star-btn" data-v="1" onclick="setRating(1)">⭐</button>
+            <button class="star-btn" data-v="2" onclick="setRating(2)">⭐</button>
+            <button class="star-btn" data-v="3" onclick="setRating(3)">⭐</button>
+            <button class="star-btn" data-v="4" onclick="setRating(4)">⭐</button>
+            <button class="star-btn" data-v="5" onclick="setRating(5)">⭐</button>
+          </div>
+          <textarea class="review-textarea" id="review-text" oninput="updateSubmitBtn()" placeholder="温泉の感想を書いてみましょう…（例：お湯がとろとろで肌がスベスベになりました！）"></textarea>
+          <button class="review-submit" id="review-submit-btn" onclick="submitReview()" disabled>投稿する</button>
+        </div>
+        <!-- 口コミ一覧 -->
+        <div id="review-list"></div>
+        <div style="height:8px;"></div>
+        <button class="modal-btn" onclick="closeModal()"
+          style="background:transparent;border:1px solid var(--white-faint);color:var(--white-dim);">閉じる</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト -->
+  <div id="toast"></div>
+
+</div><!-- /app-frame -->
+
+<script>
+// ─────────────────────────────────────────
+// データ定義
+// ─────────────────────────────────────────
+const ONSENS = [
+  { id:1,  name:'月岡温泉 白玉の湯',     emoji:'🌙',  area:'新発田市・月岡',     lat:37.8543, lng:139.4128, desc:'新潟を代表する名湯。硫黄泉の緑色の湯が特徴。美肌効果で人気。大露天風呂が自慢。',               sauna:true,  outdoor:true,  area_tag:'niigata', features:['露天風呂','サウナ','食事処','駐車場','美肌の湯'],           baseUsers:28, maxUsers:60,  hours:'10:00〜21:00' },
+  { id:2,  name:'越後湯沢温泉 空の湯',   emoji:'⛷️',  area:'南魚沼郡・湯沢',     lat:36.9298, lng:138.8226, desc:'冬はスキー、夏は登山客で賑わう高原の温泉。清涼感あふれる単純泉。',                               sauna:true,  outdoor:true,  area_tag:'yuzawa',  features:['露天風呂','サウナ','水風呂18℃','休憩室','絶景'],             baseUsers:15, maxUsers:40,  hours:'9:00〜22:00' },
+  { id:3,  name:'松之山温泉 凌雲閣',     emoji:'🏔️',  area:'十日町市・松之山',   lat:37.1234, lng:138.6421, desc:'日本三大薬湯の一つ。高濃度の塩化物泉は体の芯から温まる。秘湯の雰囲気漂う名湯。',                 sauna:false, outdoor:true,  area_tag:'niigata', features:['露天風呂','日本三大薬湯','源泉かけ流し','貸切風呂'],           baseUsers:8,  maxUsers:25,  hours:'10:00〜20:00' },
+  { id:4,  name:'咲花温泉 湯けむり街道', emoji:'🌸',  area:'五泉市・咲花',       lat:37.6543, lng:139.1234, desc:'阿賀野川のほとりに建つ温泉街。緑礬泉（ラジウム泉）で神経痛に効果的。',                             sauna:false, outdoor:true,  area_tag:'niigata', features:['露天風呂','川沿いの湯','神経痛に効果','旅館街'],               baseUsers:12, maxUsers:35,  hours:'11:00〜21:00' },
+  { id:5,  name:'燕温泉 黄金の湯',       emoji:'♨️',  area:'妙高市・燕温泉',     lat:36.9876, lng:138.1234, desc:'妙高山麓の秘湯。無料の野天風呂「黄金の湯」が有名。硫黄成分たっぷりの白濁した湯。',                 sauna:false, outdoor:true,  area_tag:'myoko',   features:['野天風呂(無料)','白濁硫黄泉','秘湯','混浴あり'],               baseUsers:5,  maxUsers:20,  hours:'終日（野天風呂）' },
+  { id:6,  name:'岩室温泉 だいろの湯',   emoji:'🪨',  area:'新潟市南区・岩室',   lat:37.7123, lng:138.9876, desc:'新潟市内から近い日帰り温泉。塩化物泉でポカポカが続く。サウナ・水風呂が充実。',                     sauna:true,  outdoor:false, area_tag:'niigata', features:['サウナ','水風呂16℃','駐車場200台','レストラン','岩盤浴'],      baseUsers:35, maxUsers:80,  hours:'10:00〜22:00' },
+  { id:7,  name:'弥彦温泉 弥彦の湯',     emoji:'⛩️',  area:'西蒲原郡・弥彦',     lat:37.6789, lng:138.8765, desc:'越後一宮・弥彦神社の参道そばの温泉。神域に湧く清らかな単純泉。観光と合わせて。',                   sauna:false, outdoor:true,  area_tag:'niigata', features:['露天風呂','神社近く','観光地','足湯あり'],                     baseUsers:20, maxUsers:45,  hours:'9:00〜21:00' },
+  { id:8,  name:'佐渡島 相川温泉',       emoji:'🏝️',  area:'佐渡市・相川',       lat:38.0234, lng:138.2345, desc:'金山の島・佐渡の温泉。日本海を望む露天風呂は絶景。湯量豊富な塩化物泉。',                           sauna:false, outdoor:true,  area_tag:'sado',    features:['海景色の露天','源泉かけ流し','金山観光','夕日スポット'],         baseUsers:10, maxUsers:30,  hours:'10:00〜21:00' },
+  { id:9,  name:'赤倉温泉 リゾートスパ', emoji:'🎿',  area:'妙高市・赤倉',       lat:36.9432, lng:138.1098, desc:'妙高高原を望む絶景温泉リゾート。大型サウナとロウリュが人気。冬はスキー客で賑わう。',                 sauna:true,  outdoor:true,  area_tag:'myoko',   features:['大型サウナ','ロウリュ','露天風呂','スキーリゾート','水風呂14℃'],baseUsers:22, maxUsers:55,  hours:'8:00〜22:00' },
+  { id:10, name:'十日町温泉 まつだい館', emoji:'🎨',  area:'十日町市・まつだい', lat:37.0876, lng:138.5432, desc:'大地の芸術祭の里にある温泉。棚田と里山に囲まれたのどかな湯処。貸切風呂が人気。',                   sauna:false, outdoor:true,  area_tag:'niigata', features:['貸切風呂','棚田ビュー','芸術祭エリア','食事付き'],             baseUsers:7,  maxUsers:20,  hours:'11:00〜20:00' },
+];
+
+// ─────────────────────────────────────────
+// 状態管理
+// ─────────────────────────────────────────
+const INITIAL_HISTORY = [
+  { id:6, name:'岩室温泉 だいろの湯', emoji:'🪨', date:'5/28', duration:'1時間32分' },
+  { id:1, name:'月岡温泉 白玉の湯',   emoji:'🌙', date:'5/20', duration:'2時間05分' },
+  { id:7, name:'弥彦温泉 弥彦の湯',   emoji:'⛩️', date:'5/14', duration:'45分' },
+];
+
+const state = {
+  favorites:     new Set(),
+  checkedInOnsen: null,
+  _checkinTime:   null,
+  _lastFocusedEl: null,
+  userLat: 37.7123,
+  userLng: 138.9876,
+  gpsEnabled: true,
+  visits:   INITIAL_HISTORY.length,
+  reviews:  0,
+  loggedIn: false,
+  loginProvider: null,
+  userName:  '湯っくりユーザー',
+  userEmail: '',
+  // 性別: 'male' | 'female' | 'none'（男女別混雑データの集計に使用）
+  gender: 'none',
+  history: [...INITIAL_HISTORY],
+  reviewsMap: {},
+  _modalOnsenId: null,
+  _currentRating: 0,
+};
+
+// ─────────────────────────────────────────
+// 口コミ初期サンプルデータ
+// ─────────────────────────────────────────
+const SAMPLE_REVIEWS = {
+  1: [
+    { id:'r1a', author:'温泉好き太郎', avatar:'🧔', rating:5, text:'硫黄泉の緑色のお湯が絶品！美肌効果も実感できました。露天風呂から眺める月岡の夜景も最高です。', date:'6/1', helpful:8, likedByMe:false },
+    { id:'r1b', author:'さくら',       avatar:'👩', rating:4, text:'お湯の質が素晴らしく、ぬるぬる感がすごい。食事処のメニューも豊富でゆっくりできました。', date:'5/28', helpful:5, likedByMe:false },
+    { id:'r1c', author:'新潟在住',     avatar:'🧑', rating:5, text:'県内トップクラスの温泉。週末は混むので平日がおすすめです！', date:'5/22', helpful:3, likedByMe:false },
+  ],
+  2: [
+    { id:'r2a', author:'スキー帰り',   avatar:'⛷️', rating:5, text:'スキー後の疲れがどこかへ飛んでいきました。サウナと水風呂のセットが最高！', date:'5/30', helpful:6, likedByMe:false },
+    { id:'r2b', author:'登山女子',     avatar:'🧗', rating:4, text:'露天風呂から見える山の景色が絶景。お湯はさっぱりした単純泉で長湯できます。', date:'5/18', helpful:4, likedByMe:false },
+  ],
+  3: [
+    { id:'r3a', author:'薬湯マニア',   avatar:'💊', rating:5, text:'日本三大薬湯の一つというだけあって、効能が違います。体がずっとポカポカでした。', date:'5/25', helpful:7, likedByMe:false },
+    { id:'r3b', author:'秘湯好き',     avatar:'🗻', rating:4, text:'山奥の秘湯感がたまらない。貸切風呂も良かったです。', date:'5/10', helpful:2, likedByMe:false },
+  ],
+  4: [
+    { id:'r4a', author:'川沿い散歩',   avatar:'🌸', rating:4, text:'阿賀野川の川霧と温泉が幻想的。旅館の方も親切でした。', date:'5/27', helpful:3, likedByMe:false },
+  ],
+  5: [
+    { id:'r5a', author:'秘湯探検家',   avatar:'🥾', rating:5, text:'無料の野天風呂は最高の体験！白濁した硫黄泉に浸かりながら妙高の自然を満喫できます。', date:'5/20', helpful:9, likedByMe:false },
+  ],
+  6: [
+    { id:'r6a', author:'サウナー',     avatar:'🧖', rating:5, text:'サウナと水風呂16℃のコンボが最高！ととのいました。新潟市から近いのも便利。', date:'6/2', helpful:11, likedByMe:false },
+    { id:'r6b', author:'家族連れ',     avatar:'👨‍👩‍👧', rating:4, text:'駐車場が広くて子連れでも安心。岩盤浴も良かった！', date:'5/29', helpful:5, likedByMe:false },
+    { id:'r6c', author:'常連客',       avatar:'🪨', rating:5, text:'月3回は来ています。施設が清潔で居心地最高。レストランのランチもおすすめ！', date:'5/15', helpful:8, likedByMe:false },
+  ],
+  7: [
+    { id:'r7a', author:'弥彦参拝帰り', avatar:'⛩️', rating:4, text:'弥彦神社のお参り後に立ち寄りました。清らかなお湯で心が落ち着きます。', date:'5/26', helpful:4, likedByMe:false },
+    { id:'r7b', author:'足湯好き',     avatar:'🦶', rating:4, text:'足湯が無料で使えるのが嬉しい。参道散策のついでにぜひ！', date:'5/12', helpful:2, likedByMe:false },
+  ],
+  8: [
+    { id:'r8a', author:'佐渡観光客',   avatar:'🏝️', rating:5, text:'夕日が沈む日本海を眺めながらの露天風呂は一生忘れません。源泉かけ流しで最高！', date:'5/23', helpful:12, likedByMe:false },
+  ],
+  9: [
+    { id:'r9a', author:'ロウリュ好き', avatar:'🔥', rating:5, text:'大型サウナのロウリュイベントが圧巻。水風呂14℃で完全にととのいました！', date:'6/1', helpful:7, likedByMe:false },
+    { id:'r9b', author:'冬スキー',     avatar:'🎿', rating:5, text:'スキー場直結で便利。リゾート感あふれる施設で贅沢な時間が過ごせます。', date:'5/8', helpful:4, likedByMe:false },
+  ],
+  10: [
+    { id:'r10a', author:'芸術祭ファン', avatar:'🎨', rating:4, text:'大地の芸術祭を巡った後に立ち寄り。棚田を眺める貸切風呂が最高でした。', date:'5/24', helpful:3, likedByMe:false },
+  ],
+};
+
+// ─────────────────────────────────────────
+// 口コミ初期化
+// ─────────────────────────────────────────
+function initReviews() {
+  // サンプルデータを state.reviewsMap にコピー
+  Object.keys(SAMPLE_REVIEWS).forEach(id => {
+    state.reviewsMap[id] = SAMPLE_REVIEWS[id].map(r => ({ ...r }));
+  });
+  ONSENS.forEach(o => {
+    if (!state.reviewsMap[o.id]) state.reviewsMap[o.id] = [];
+  });
+}
+
+// ─────────────────────────────────────────
+// モーダルタブ切り替え
+// ─────────────────────────────────────────
+function switchModalTab(tab) {
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.modal-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-btn-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'review') renderReviewTab(state._modalOnsenId);
+}
+
+// ─────────────────────────────────────────
+// 口コミタブ描画
+// ─────────────────────────────────────────
+function renderReviewTab(onsenId) {
+  if (!onsenId) return;
+  const reviews = state.reviewsMap[onsenId] || [];
+
+  // サマリー
+  const avg = reviews.length
+    ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+    : '—';
+  const stars = avg !== '—' ? starsHtml(Math.round(parseFloat(avg))) : '☆☆☆☆☆';
+  document.getElementById('review-summary').innerHTML = `
+    <div class="review-summary">
+      <div style="text-align:center;">
+        <div class="review-avg">${avg}</div>
+        <div class="review-avg-label">/ 5.0</div>
+      </div>
+      <div>
+        <div class="review-stars-disp">${stars}</div>
+        <div class="review-count">${reviews.length}件の口コミ</div>
+      </div>
+    </div>`;
+
+  // フォームリセット
+  resetReviewForm();
+
+  // 口コミ一覧
+  const listEl = document.getElementById('review-list');
+  if (reviews.length === 0) {
+    listEl.innerHTML = `<div class="review-empty"><div class="review-empty-icon">💬</div>まだ口コミがありません<br><small>最初の口コミを投稿してみましょう！</small></div>`;
+    return;
+  }
+  listEl.innerHTML = [...reviews].reverse().map(r => `
+    <div class="review-card">
+      <div class="review-card-header">
+        <div class="review-avatar">${r.avatar}</div>
+        <div class="review-meta">
+          <div class="review-author">${escHtml(r.author)}</div>
+          <div class="review-date">📅 ${r.date}</div>
+        </div>
+        <div class="review-stars">${starsHtml(r.rating)}</div>
+      </div>
+      <div class="review-text">${escHtml(r.text)}</div>
+      <button class="review-helpful ${r.likedByMe ? 'liked' : ''}"
+        onclick="toggleHelpful('${onsenId}','${r.id}',this)">
+        👍 役に立った ${r.helpful > 0 ? r.helpful : ''}
+      </button>
+    </div>`).join('');
+}
+
+function starsHtml(n) {
+  return '⭐'.repeat(Math.max(0, Math.min(5, n))) + '☆'.repeat(Math.max(0, 5 - n));
+}
+
+function escHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ─────────────────────────────────────────
+// 星評価セット
+// ─────────────────────────────────────────
+function setRating(val) {
+  state._currentRating = val;
+  document.querySelectorAll('.star-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.v) <= val);
+  });
+  updateSubmitBtn();
+}
+
+function resetReviewForm() {
+  state._currentRating = 0;
+  document.querySelectorAll('.star-btn').forEach(b => b.classList.remove('active'));
+  const ta = document.getElementById('review-text');
+  if (ta) ta.value = '';
+  updateSubmitBtn();
+}
+
+function updateSubmitBtn() {
+  const ta  = document.getElementById('review-text');
+  const btn = document.getElementById('review-submit-btn');
+  if (!btn) return;
+  const hasText   = ta && ta.value.trim().length > 0;
+  const hasRating = state._currentRating > 0;
+  btn.disabled = !(hasText && hasRating);
+}
+
+// ─────────────────────────────────────────
+// 口コミ投稿
+// ─────────────────────────────────────────
+function submitReview() {
+  const onsenId = state._modalOnsenId;
+  if (!onsenId) return;
+  const ta   = document.getElementById('review-text');
+  const text = ta ? ta.value.trim() : '';
+  if (!text || !state._currentRating) return;
+
+  const now    = new Date();
+  const author = state.loggedIn ? state.userName : 'ゲスト';
+  const avatars = ['🧖','🧔','👩','🧑','🌿','♨️','🛁','🗻','🌊','🌸'];
+  const avatar  = state.loggedIn ? '🧖' : avatars[Math.floor(Math.random() * avatars.length)];
+
+  const review = {
+    id:      'u' + Date.now(),
+    author,
+    avatar,
+    rating:  state._currentRating,
+    text,
+    date:    `${now.getMonth()+1}/${now.getDate()}`,
+    helpful: 0,
+    likedByMe: false,
+  };
+
+  if (!state.reviewsMap[onsenId]) state.reviewsMap[onsenId] = [];
+  state.reviewsMap[onsenId].push(review);
+
+  // マイページのレビュー数を更新
+  state.reviews++;
+  const el = document.getElementById('mp-reviews');
+  if (el) el.textContent = state.reviews;
+
+  showToast('口コミを投稿しました！ありがとうございます');
+  renderReviewTab(onsenId);
+}
+
+// ─────────────────────────────────────────
+// 役に立った
+// ─────────────────────────────────────────
+function toggleHelpful(onsenId, reviewId, btn) {
+  const reviews = state.reviewsMap[onsenId];
+  if (!reviews) return;
+  const r = reviews.find(x => x.id === reviewId);
+  if (!r) return;
+  if (r.likedByMe) {
+    r.likedByMe = false;
+    r.helpful   = Math.max(0, r.helpful - 1);
+    btn.classList.remove('liked');
+  } else {
+    r.likedByMe = true;
+    r.helpful++;
+    btn.classList.add('liked');
+  }
+  btn.innerHTML = `👍 役に立った ${r.helpful > 0 ? r.helpful : ''}`;
+}
+
+// ─────────────────────────────────────────
+// B1: 人数キャッシュ
+// ─────────────────────────────────────────
+const userCache = new Map();
+
+// ─────────────────────────────────────────
+// GPS・混雑ロジック
+// ─────────────────────────────────────────
+function calcDistance(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function getCurrentUsers(onsen) {
+  if (userCache.has(onsen.id)) return userCache.get(onsen.id);
+  const hour = new Date().getHours();
+  const multi = hour >= 10 && hour <= 14 ? 1.2 : hour >= 15 && hour <= 19 ? 1.5 : hour >= 20 ? 0.8 : 0.6;
+  const base   = Math.floor(onsen.baseUsers * multi);
+  const jitter = Math.floor(Math.random() * 10) - 5;
+  const extra  = state.checkedInOnsen === onsen.id ? 1 : 0;
+  const val = Math.max(0, Math.min(onsen.maxUsers, base + jitter + extra));
+  userCache.set(onsen.id, val);
+  return val;
+}
+
+function getGroups(users) { return Math.ceil(users / 2.2); }
+
+function getCongestionLevel(users, max) {
+  const r = users / max;
+  if (r < 0.3)  return { level:'empty',   label:'空いている',   icon:'🟢' };
+  if (r < 0.6)  return { level:'normal',  label:'普通',         icon:'🔵' };
+  if (r < 0.85) return { level:'busy',    label:'混雑',         icon:'🟠' };
+  return              { level:'crowded', label:'非常に混雑',   icon:'🔴' };
+}
+
+function getDistLabel(onsen) {
+  const d = calcDistance(state.userLat, state.userLng, onsen.lat, onsen.lng);
+  if (d < 100)  return '目の前';
+  if (d < 1000) return Math.round(d) + 'm';
+  return (d/1000).toFixed(1) + 'km';
+}
+
+// B4: チェックイン/アウトロジック修正済み + F3: 履歴連動 + H2: renderMypage呼び出し
+function checkGpsCheckin() {
+  const nearby = ONSENS.find(o =>
+    calcDistance(state.userLat, state.userLng, o.lat, o.lng) <= 100
+  );
+  if (nearby) {
+    if (state.checkedInOnsen !== nearby.id) {
+      if (state.checkedInOnsen !== null) {
+        const prev = ONSENS.find(o => o.id === state.checkedInOnsen);
+        if (prev) showGpsNotice(`🚶 ${prev.name} からチェックアウトしました`);
+        hideCheckinIndicator();
+      }
+      state.checkedInOnsen = nearby.id;
+      state._checkinTime   = Date.now();
+      state.visits++;
+      const el = document.getElementById('mp-visits');
+      if (el) el.textContent = state.visits;
+      showCheckinIndicator(nearby);
+      showGpsNotice(`♨️ ${nearby.name} に自動チェックイン！`);
+    }
+  } else {
+    if (state.checkedInOnsen !== null) {
+      const prev = ONSENS.find(o => o.id === state.checkedInOnsen);
+      if (prev) {
+        const elapsed = state._checkinTime
+          ? Math.round((Date.now() - state._checkinTime) / 60000) : 0;
+        const dur = elapsed >= 60
+          ? `${Math.floor(elapsed/60)}時間${elapsed%60}分`
+          : elapsed > 0 ? `${elapsed}分` : '1分未満';
+        const now = new Date();
+        state.history.unshift({
+          id: prev.id, name: prev.name, emoji: prev.emoji,
+          date: `${now.getMonth()+1}/${now.getDate()}`,
+          time: `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`,
+          duration: dur,
+        });
+        if (state.history.length > 10) state.history.pop();
+        showGpsNotice(`🚶 ${prev.name} からチェックアウト（${dur}）`);
+      }
+      state.checkedInOnsen = null;
+      state._checkinTime   = null;
+      hideCheckinIndicator();
+      // H2: マイページが開いていれば即時更新
+      const active = document.querySelector('.page.active');
+      if (active && active.id === 'page-mypage') renderMypage();
+    }
+  }
+}
+
+// ─────────────────────────────────────────
+// UI ヘルパー
+// ─────────────────────────────────────────
+function showCheckinIndicator(onsen) {
+  document.getElementById('ci-text').textContent = `${onsen.emoji} ${onsen.name} チェックイン中`;
+  document.getElementById('checkin-indicator').classList.add('show');
+}
+function hideCheckinIndicator() {
+  document.getElementById('checkin-indicator').classList.remove('show');
+}
+function showGpsNotice(msg) {
+  document.getElementById('gps-notice-text').textContent = msg;
+  document.getElementById('gps-notice').classList.add('show');
+  setTimeout(() => document.getElementById('gps-notice').classList.remove('show'), 4000);
+}
+function hideGpsNotice() {
+  document.getElementById('gps-notice').classList.remove('show');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  setTimeout(() => t.style.opacity = '0', 2500);
+}
+function makeBadge(level, label, icon) {
+  return `<span class="congestion-badge ${level}"><span class="congestion-dot"></span>${icon} ${label}</span>`;
+}
+
+// C2: toggleFavorite に一本化（btn 参照を使わずカードを再描画で同期）
+function toggleFavorite(id) {
+  if (state.favorites.has(id)) {
+    state.favorites.delete(id);
+    showToast('お気に入りから削除しました');
+  } else {
+    state.favorites.add(id);
+    showToast('お気に入りに追加しました！');
+  }
+  const el = document.getElementById('mp-favs');
+  if (el) el.textContent = state.favorites.size;
+  // 再描画で全カードのハート表示を同期
+  const active = document.querySelector('.page.active');
+  if (active) {
+    if (active.id === 'page-home')       renderHome();
+    if (active.id === 'page-search')     renderSearch();
+    if (active.id === 'page-congestion') renderCongestion();
+  }
+}
+// C2: インライン onclick 用ラッパー（btn は渡されても使わない）
+function toggleFav(id) { toggleFavorite(id); }
+
+// ─────────────────────────────────────────
+// タブ切り替え
+// ─────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t => {
+    t.classList.remove('active');
+    t.setAttribute('aria-selected','false');
+    t.setAttribute('tabindex','-1');
+  });
+  document.getElementById('page-'+tab).classList.add('active');
+  el.classList.add('active');
+  el.setAttribute('aria-selected','true');
+  el.setAttribute('tabindex','0');
+  document.getElementById('screen').scrollTop = 0;
+  if (tab === 'congestion') renderCongestion();
+  if (tab === 'search')     renderSearch();
+  if (tab === 'mypage')     renderMypage();
+}
+
+// ─────────────────────────────────────────
+// ホーム
+// ─────────────────────────────────────────
+function renderHome() {
+  document.getElementById('home-recommend').innerHTML =
+    ONSENS.slice(0,6).map(o => makeHCard(o)).join('');
+
+  const emptyList = ONSENS.filter(o =>
+    getCongestionLevel(getCurrentUsers(o), o.maxUsers).level === 'empty'
+  ).slice(0,4);
+  document.getElementById('home-empty').innerHTML =
+    emptyList.map(o => makeHCard(o)).join('');
+
+  // M3: currentUsers で動的ソートしてランキングを毎回更新
+  const ranking = [...ONSENS]
+    .map(o => ({ ...o, _u: getCurrentUsers(o) }))
+    .sort((a,b) => b._u - a._u)
+    .slice(0,5);
+  document.getElementById('home-ranking').innerHTML = ranking.map((o,i) => {
+    const c = getCongestionLevel(o._u, o.maxUsers);
+    return `
+    <div class="list-card fade-in" onclick="openModal(${o.id})" style="animation-delay:${i*0.05}s"
+      role="button" tabindex="0" onkeydown="if(event.key==='Enter')openModal(${o.id})">
+      <div class="list-rank ${i===1?'rank-2':i===2?'rank-3':''}">${i+1}</div>
+      <div class="list-img">${o.emoji}</div>
+      <div class="list-body">
+        <div class="list-name">${o.name}</div>
+        <div class="list-area">📍 ${o.area}</div>
+        <div class="list-meta">
+          ${makeBadge(c.level,c.label,c.icon)}
+          <span style="font-size:11px;color:var(--white-dim)">${getDistLabel(o)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function makeHCard(o) {
+  const c = getCongestionLevel(getCurrentUsers(o), o.maxUsers);
+  const favClass = state.favorites.has(o.id) ? 'active' : '';
+  const favIcon  = state.favorites.has(o.id) ? '❤️' : '♡';
+  return `
+  <div class="onsen-card" onclick="openModal(${o.id})" role="button" tabindex="0"
+    onkeydown="if(event.key==='Enter')openModal(${o.id})">
+    <div class="card-img">${o.emoji}</div>
+    <button class="card-fav ${favClass}" aria-label="お気に入り"
+      onclick="event.stopPropagation();toggleFav(${o.id})">${favIcon}</button>
+    <div class="card-body">
+      <div class="card-name">${o.name}</div>
+      <div class="card-area">📍 ${o.area}</div>
+      ${makeBadge(c.level,c.label,c.icon)}
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────
+// 探す
+// ─────────────────────────────────────────
+let activeFilter = 'all';
+// M4: debounce 実装
+let _searchTimer = null;
+function debouncedSearch() {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(renderSearch, 200);
+}
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  renderSearch();
+}
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('#filter-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderSearch();
+}
+
+function renderSearch() {
+  const q = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const list = ONSENS.filter(o => {
+    if (q && !o.name.toLowerCase().includes(q) && !o.area.toLowerCase().includes(q)) return false;
+    if (activeFilter === 'empty') {
+      if (getCongestionLevel(getCurrentUsers(o), o.maxUsers).level !== 'empty') return false;
+    }
+    if (activeFilter === 'sauna'   && !o.sauna)   return false;
+    if (activeFilter === 'outdoor' && !o.outdoor) return false;
+    if (['niigata','yuzawa','sado','myoko'].includes(activeFilter) && o.area_tag !== activeFilter) return false;
+    return true;
+  });
+
+  document.getElementById('search-list').innerHTML = list.map((o,i) => {
+    const u = getCurrentUsers(o);
+    const c = getCongestionLevel(u, o.maxUsers);
+    const favClass = state.favorites.has(o.id) ? 'active' : '';
+    const favIcon  = state.favorites.has(o.id) ? '❤️' : '♡';
+    return `
+    <div class="list-card fade-in" onclick="openModal(${o.id})" style="animation-delay:${i*0.04}s"
+      role="button" tabindex="0" onkeydown="if(event.key==='Enter')openModal(${o.id})">
+      <div class="list-img">${o.emoji}</div>
+      <div class="list-body">
+        <div class="list-name">${o.name}</div>
+        <div class="list-area">📍 ${o.area}</div>
+        <div class="list-meta">
+          ${makeBadge(c.level,c.label,c.icon)}
+          <span style="font-size:11px;color:var(--white-dim)">${getDistLabel(o)}</span>
+        </div>
+      </div>
+      <button class="card-fav ${favClass}" aria-label="お気に入り"
+        style="position:static;background:transparent;"
+        onclick="event.stopPropagation();toggleFav(${o.id})">${favIcon}</button>
+    </div>`;
+  }).join('');
+  renderMapPins(list);
+}
+
+function renderMapPins(list) {
+  const mapW = 350, mapH = 200;
+  const lats = ONSENS.map(o => o.lat), lngs = ONSENS.map(o => o.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  function toXY(lat, lng) {
+    return {
+      x: ((lng-minLng)/(maxLng-minLng))*(mapW-40)+20,
+      y: ((maxLat-lat)/(maxLat-minLat))*(mapH-40)+20,
+    };
+  }
+  document.getElementById('map-pins').innerHTML = list.map(o => {
+    const u = getCurrentUsers(o);
+    const c = getCongestionLevel(u, o.maxUsers);
+    const {x,y} = toXY(o.lat, o.lng);
+    return `<div class="map-pin ${c.level}" style="left:${x}px;top:${y}px" onclick="openModal(${o.id})">
+      <div class="pin-bubble">${o.emoji} ${u}人</div>
+      <div class="pin-dot"></div>
+    </div>`;
+  }).join('');
+  const {x,y} = toXY(state.userLat, state.userLng);
+  const u = document.getElementById('map-user');
+  const ul = document.getElementById('map-user-label');
+  if (u)  { u.style.left  = x+'px'; u.style.top  = y+'px'; }
+  if (ul) { ul.style.left = x+'px'; ul.style.top = y+'px'; }
+}
+
+// ─────────────────────────────────────────
+// 混雑状況
+// ─────────────────────────────────────────
+let sortMode = 'dist';
+function setSortMode(mode, el) {
+  sortMode = mode;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  renderCongestion();
+}
+
+function renderCongestion() {
+  let list = ONSENS.map(o => {
+    const u = getCurrentUsers(o);
+    return { ...o, currentUsers:u, currentGroups:getGroups(u), congestion:getCongestionLevel(u,o.maxUsers) };
+  });
+  if      (sortMode === 'dist')  list.sort((a,b) => calcDistance(state.userLat,state.userLng,a.lat,a.lng) - calcDistance(state.userLat,state.userLng,b.lat,b.lng));
+  else if (sortMode === 'empty') list.sort((a,b) => (a.currentUsers/a.maxUsers)-(b.currentUsers/b.maxUsers));
+  else if (sortMode === 'busy')  list.sort((a,b) => (b.currentUsers/b.maxUsers)-(a.currentUsers/a.maxUsers));
+  else if (sortMode === 'fav')   list = list.filter(o => state.favorites.has(o.id));
+
+  if (list.length === 0) {
+    document.getElementById('congestion-list').innerHTML =
+      `<div style="text-align:center;color:var(--white-dim);padding:40px 20px;">
+        <div style="font-size:40px;margin-bottom:12px;">♡</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:6px;">お気に入りはまだありません</div>
+        <div style="font-size:12px;">温泉カードの ♡ をタップして追加しましょう</div>
+      </div>`;
+    renderAiChart(); return;
+  }
+
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+  document.getElementById('congestion-list').innerHTML = list.map((o,i) => {
+    const checked = state.checkedInOnsen === o.id;
+    return `
+    <div class="congestion-card ${checked?'checked-in':''} fade-in" onclick="openModal(${o.id})" style="animation-delay:${i*0.04}s"
+      role="button" tabindex="0" onkeydown="if(event.key==='Enter')openModal(${o.id})">
+      <div class="cc-header">
+        <div class="cc-emoji">${o.emoji}</div>
+        <div class="cc-info">
+          <div class="cc-name">${o.name}</div>
+          <div class="cc-area">📍 ${o.area} &nbsp;|&nbsp; 📏 ${getDistLabel(o)}</div>
+        </div>
+        ${checked ? '<span class="checkin-badge">✓ チェックイン中</span>' : ''}
+      </div>
+      <div class="cc-stats">
+        <div class="cc-stat"><div class="stat-val">${o.currentUsers}</div><div class="stat-label">現在の利用人数</div></div>
+        <div class="cc-stat"><div class="stat-val">${o.currentGroups}</div><div class="stat-label">現在の利用組数</div></div>
+        <div class="cc-stat"><div class="stat-val">${Math.round(o.currentUsers/o.maxUsers*100)}%</div><div class="stat-label">混雑率</div></div>
+      </div>
+      <div class="cc-footer">
+        ${makeBadge(o.congestion.level,o.congestion.label,o.congestion.icon)}
+        <span class="cc-updated">🕐 ${timeStr} 更新</span>
+      </div>
+    </div>`;
+  }).join('');
+  renderAiChart();
+}
+
+function renderAiChart() {
+  const hours = [9,10,11,12,13,14,15,16,17,18,19,20,21];
+  const totalBase = ONSENS.reduce((s,o) => s+o.baseUsers, 0);
+  const preds = hours.map(h => {
+    const m = h>=10&&h<=14?1.2:h>=15&&h<=19?1.5:h>=20?0.8:0.6;
+    return Math.round(totalBase*m/ONSENS.length);
+  });
+  const cur = new Date().getHours();
+  const max = Math.max(...preds);
+  document.getElementById('ai-chart').innerHTML = preds.map((v,i) => {
+    const h = hours[i];
+    const cls = (v===max?'peak':'') + (h===cur?' now':'');
+    const ht  = Math.max(8, Math.round(v/max*36));
+    return `<div class="ai-bar ${cls}" style="height:${ht}px" title="${h}時: 平均${v}人"></div>`;
+  }).join('');
+  document.getElementById('ai-labels').innerHTML = hours.map(h=>`<div class="ai-label">${h}</div>`).join('');
+}
+
+// ─────────────────────────────────────────
+// ログイン
+// ─────────────────────────────────────────
+function openLoginModal() {
+  document.getElementById('login-modal-overlay').classList.add('show');
+}
+function closeLoginModal() {
+  document.getElementById('login-modal-overlay').classList.remove('show');
+}
+function closeLoginModalOnBg(e) {
+  if (e.target === document.getElementById('login-modal-overlay')) closeLoginModal();
+}
+
+// Ghost Click 対策: モーダル閉直後に下層要素への誤クリックをブロック
+function blockGhostClicks() {
+  const shield = document.createElement('div');
+  shield.style.cssText = 'position:absolute;inset:0;z-index:9999;pointer-events:all;';
+  document.getElementById('app').appendChild(shield);
+  setTimeout(() => shield.remove(), 400);
+}
+function doLogin(provider) {
+  if (state.loggedIn) return; // 二重実行防止
+  state.loggedIn = true;
+  state.loginProvider = provider;
+  if (provider === 'apple') {
+    state.userName  = '温泉太郎';
+    state.userEmail = 'taro@icloud.com';
+  } else {
+    state.userName  = '湯川さくら';
+    state.userEmail = 'sakura@gmail.com';
+  }
+  closeLoginModal();
+  renderMypage();
+  showToast(`${provider==='apple'?'Apple':'Google'}でログインしました！`);
+  // Ghost Click 対策: モーダル閉後 400ms はページ全体のクリックをブロック
+  blockGhostClicks();
+}
+function doLogout() {
+  state.loggedIn = false;
+  state.loginProvider = null;
+  state.userName  = '湯っくりユーザー';
+  state.userEmail = '';
+  renderMypage();
+  showToast('ログアウトしました');
+}
+
+// ─────────────────────────────────────────
+// マイページ
+// ─────────────────────────────────────────
+function renderMypage() {
+  document.getElementById('mp-username').textContent = state.userName;
+
+  // サブテキストに性別を反映
+  const genderLabel = state.gender === 'male' ? '男性' : state.gender === 'female' ? '女性' : '';
+  const sub = document.getElementById('mp-user-sub');
+  if (sub) sub.textContent = genderLabel ? `新潟温泉ファン・${genderLabel}` : '新潟温泉ファン';
+
+  // プロバイダーバッジ
+  const badge = document.getElementById('mp-provider-badge');
+  if (state.loggedIn && state.loginProvider) {
+    const icon = state.loginProvider === 'apple'
+      ? '&#63743;'
+      : '<span style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;background:#4285F4;border-radius:50%;color:#fff;font-size:9px;font-weight:900;font-family:sans-serif;">G</span>';
+    badge.innerHTML = `<span class="provider-badge">${icon}&nbsp;${state.userEmail}</span>`;
+  } else {
+    badge.innerHTML = '';
+  }
+
+  document.getElementById('mp-visits').textContent  = state.visits;
+  document.getElementById('mp-favs').textContent    = state.favorites.size;
+  document.getElementById('mp-reviews').textContent = state.reviews;
+
+  // 履歴
+  document.getElementById('history-list').innerHTML = state.history.length > 0
+    ? state.history.map(h => `
+      <div class="history-item">
+        <div class="hi-emoji">${h.emoji}</div>
+        <div class="hi-body">
+          <div class="hi-name">${h.name}</div>
+          <div class="hi-date">📅 ${h.date}${h.time ? ' ' + h.time : ''}</div>
+        </div>
+        <div class="hi-duration">⏱ ${h.duration}</div>
+      </div>`).join('')
+    : '<div style="padding:20px;text-align:center;color:var(--white-dim);font-size:13px;">まだ訪問履歴はありません</div>';
+
+  // アカウントメニュー
+  const menu = document.getElementById('account-menu-items');
+  const genderMenuHtml = `
+    <div class="menu-item" style="flex-direction:column;align-items:flex-start;gap:8px;">
+      <div style="display:flex;align-items:center;gap:14px;width:100%">
+        <span class="mi-icon">⚧️</span><span class="mi-label">性別設定</span>
+      </div>
+      <div class="gender-select" style="padding:0;width:100%;">
+        <button class="gender-btn ${state.gender==='male'?'active':''}" onclick="setGender('male')">♂ 男性</button>
+        <button class="gender-btn ${state.gender==='female'?'active':''}" onclick="setGender('female')">♀ 女性</button>
+        <button class="gender-btn ${state.gender==='none'?'active':''}" onclick="setGender('none')">− 設定しない</button>
+      </div>
+    </div>`;
+
+  menu.innerHTML = state.loggedIn ? `
+    <div class="menu-item" onclick="showToast('プロフィール編集')">
+      <span class="mi-icon">👤</span><span class="mi-label">プロフィール編集</span><span class="mi-arrow">›</span>
+    </div>
+    ${genderMenuHtml}
+    <div class="menu-item" onclick="showToast('通知設定を開きました')">
+      <span class="mi-icon">⚙️</span><span class="mi-label">通知設定</span><span class="mi-arrow">›</span>
+    </div>
+    <div class="menu-item" onclick="doLogout()" style="color:var(--red-hot)">
+      <span class="mi-icon">🚪</span><span class="mi-label" style="color:var(--red-hot)">ログアウト</span><span class="mi-arrow">›</span>
+    </div>` : `
+    ${genderMenuHtml}
+    <div class="menu-item" onclick="openLoginModal()">
+      <span class="mi-icon" style="font-size:18px;">&#63743;</span><span class="mi-label">Appleでサインイン</span><span class="mi-arrow">›</span>
+    </div>
+    <div class="menu-item" onclick="openLoginModal()">
+      <span class="mi-icon" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;background:#4285F4;border-radius:50%;color:#fff;font-size:11px;font-weight:900;font-family:sans-serif;">G</span>
+      <span class="mi-label">Googleでサインイン</span><span class="mi-arrow">›</span>
+    </div>
+    <div class="menu-item" onclick="showToast('通知設定を開きました')">
+      <span class="mi-icon">⚙️</span><span class="mi-label">通知設定</span><span class="mi-arrow">›</span>
+    </div>`;
+}
+
+// 性別設定
+function setGender(g) {
+  state.gender = g;
+  renderMypage();
+  const labels = { male:'男性に設定しました', female:'女性に設定しました', none:'性別設定を解除しました' };
+  showToast(labels[g]);
+}
+
+// ─────────────────────────────────────────
+// 設定トグル
+// ─────────────────────────────────────────
+function toggleSetting(btn) {
+  if (btn.id === 'toggle-gps') {
+    btn.classList.toggle('on');
+    state.gpsEnabled = btn.classList.contains('on');
+    showToast(state.gpsEnabled ? 'GPS追跡を有効にしました' : 'GPS追跡を無効にしました');
+
+  } else if (btn.id === 'toggle-notif') {
+    // H4: 非同期処理中はボタン操作を無効化して競合を防ぐ
+    btn.disabled = true;
+    const wasOn = btn.classList.contains('on');
+    if (!wasOn) {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(perm => {
+          btn.disabled = false;
+          if (perm === 'granted') {
+            btn.classList.add('on');
+            showToast('プッシュ通知を有効にしました');
+            new Notification('湯っくり', { body: '空き温泉の通知をお届けします♨️' });
+          } else {
+            btn.classList.remove('on');
+            showToast('通知の許可が得られませんでした');
+          }
+        });
+      } else {
+        btn.disabled = false;
+        showToast('このブラウザは通知に対応していません');
+      }
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('on');
+      showToast('プッシュ通知を無効にしました');
+    }
+
+  } else if (btn.id === 'toggle-dark') {
+    btn.classList.toggle('on');
+    applyTheme(btn.classList.contains('on'));
+    showToast(btn.classList.contains('on') ? 'ダークモードに切り替えました' : 'ライトモードに切り替えました');
+  }
+}
+
+// C1: ライトモード時に全CSS変数を一括更新
+function applyTheme(dark) {
+  const root = document.documentElement;
+  if (dark) {
+    // ダークモード（デフォルト）に戻す
+    const defaults = {
+      '--navy':'#0d1b2a','--navy-2':'#162032','--navy-3':'#1e2d42','--navy-4':'#243650',
+      '--blue':'#3d7ab5','--blue-light':'#5a9fd4','--blue-pale':'#b8d4ed',
+      '--teal':'#2a8a7e','--teal-light':'#3db8a8',
+      '--white':'#ffffff','--white-soft':'rgba(255,255,255,0.92)',
+      '--white-dim':'rgba(255,255,255,0.6)','--white-faint':'rgba(255,255,255,0.15)',
+      '--gold':'#c8a96e','--gold-light':'#e8c98e',
+      '--green-ok':'#3ab86a','--orange':'#e07830','--red-hot':'#e05050',
+    };
+    Object.entries(defaults).forEach(([k,v]) => root.style.setProperty(k,v));
+    root.style.setProperty('--tab-icon-filter', 'grayscale(1) brightness(0.5)');
+    document.documentElement.style.background = '#080f18';
+    document.body.style.background = '#080f18';
+  } else {
+    // ライトモード：コントラストを確保した和紙カラー
+    const light = {
+      '--navy':'#f5f0e8','--navy-2':'#ece7de','--navy-3':'#e0dbd2','--navy-4':'#d4cfc6',
+      '--blue':'#2a6090','--blue-light':'#1a5080','--blue-pale':'#3a7aaa',
+      '--teal':'#1a6060','--teal-light':'#1a7070',
+      '--white':'#1a1612','--white-soft':'rgba(26,22,18,0.92)',
+      '--white-dim':'rgba(26,22,18,0.55)','--white-faint':'rgba(26,22,18,0.12)',
+      '--gold':'#8a5c20','--gold-light':'#a06a28',
+      '--green-ok':'#1a7a3a','--orange':'#c05010','--red-hot':'#c03030',
+    };
+    Object.entries(light).forEach(([k,v]) => root.style.setProperty(k,v));
+    // ライトモードではアイコンを少し暗くする（brightness上げすぎで消えないよう）
+    root.style.setProperty('--tab-icon-filter', 'grayscale(1) brightness(0.35)');
+    document.documentElement.style.background = '#e8e3da';
+    document.body.style.background = '#e8e3da';
+  }
+}
+
+// ─────────────────────────────────────────
+// 詳細モーダル
+// ─────────────────────────────────────────
+function openModal(id) {
+  const o = ONSENS.find(x => x.id === id);
+  if (!o) return;
+  state._lastFocusedEl  = document.activeElement;
+  state._modalOnsenId   = o.id;
+
+  // タブを「基本情報」にリセット
+  document.querySelectorAll('.modal-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.modal-tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-btn-info').classList.add('active');
+  document.getElementById('tab-info').classList.add('active');
+
+  const u      = getCurrentUsers(o);
+  const c      = getCongestionLevel(u, o.maxUsers);
+  const groups = getGroups(u);
+  const now    = new Date();
+  const time   = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+
+  // 男女別混雑（性別設定ユーザーの比率から概算）
+  const maleRatio   = 0.52 + (Math.random() * 0.1 - 0.05);
+  const maleCount   = Math.round(u * maleRatio);
+  const femaleCount = u - maleCount;
+  const maleRate    = Math.round(maleCount / (o.maxUsers * 0.5) * 100);
+  const femaleRate  = Math.round(femaleCount / (o.maxUsers * 0.5) * 100);
+
+  document.getElementById('modal-title').textContent = o.name;
+  document.getElementById('modal-area').innerHTML    = `📍 ${o.area} &nbsp;|&nbsp; 🕐 ${o.hours}`;
+  document.getElementById('modal-img').textContent   = o.emoji;
+  document.getElementById('modal-stats').innerHTML   = `
+    <div class="modal-stat"><div class="ms-val">${u}</div><div class="ms-label">現在 ${u}人利用中</div></div>
+    <div class="modal-stat"><div class="ms-val">${groups}</div><div class="ms-label">現在 ${groups}組利用中</div></div>
+    <div class="modal-stat"><div class="ms-val" style="font-size:14px">${c.icon} ${c.label}</div><div class="ms-label">混雑レベル</div></div>
+    <div class="gender-congestion" style="grid-column:1/-1">
+      <div class="gc-card">
+        <div class="gc-label">♂ 男湯</div>
+        <div class="gc-val">${maleCount}人 <span style="font-size:11px;color:var(--white-dim)">(${Math.min(maleRate,99)}%)</span></div>
+        <div class="gc-bar-wrap"><div class="gc-bar" style="width:${Math.min(maleRate,100)}%"></div></div>
+      </div>
+      <div class="gc-card">
+        <div class="gc-label">♀ 女湯</div>
+        <div class="gc-val">${femaleCount}人 <span style="font-size:11px;color:var(--white-dim)">(${Math.min(femaleRate,99)}%)</span></div>
+        <div class="gc-bar-wrap"><div class="gc-bar female" style="width:${Math.min(femaleRate,100)}%"></div></div>
+      </div>
+    </div>`;
+  document.getElementById('modal-features').innerHTML =
+    o.features.map(f => `<span class="feature-tag">${f}</span>`).join('');
+  document.getElementById('modal-desc').textContent = o.desc;
+
+  const favBtn = document.getElementById('modal-fav-btn');
+  const updateFavBtn = () => {
+    favBtn.textContent = state.favorites.has(o.id) ? '❤️ お気に入り登録済み' : '♡ お気に入りに追加';
+  };
+  updateFavBtn();
+  favBtn.onclick = () => { toggleFavorite(o.id); updateFavBtn(); };
+
+  // show クラスを付ける前にスクロール位置をリセット（アニメーション前に確定）
+  const sheet = document.querySelector('.modal-sheet');
+  if (sheet) sheet.scrollTop = 0;
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('show');
+  if (state._lastFocusedEl) { state._lastFocusedEl.focus(); state._lastFocusedEl = null; }
+}
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+// ─────────────────────────────────────────
+// GPS
+// ─────────────────────────────────────────
+function initGPS() {
+  if (!navigator.geolocation) {
+    document.getElementById('gps-status-text').textContent = '非対応';
+    document.getElementById('gps-coords').textContent = '位置情報が利用できません';
+    return;
+  }
+  showGpsNotice('📡 GPS位置情報を取得しています...');
+  const opts = { enableHighAccuracy:true, timeout:10000, maximumAge:5000 };
+
+  function onSuccess(pos) {
+    state.userLat = pos.coords.latitude;
+    state.userLng = pos.coords.longitude;
+    document.getElementById('gps-status-text').textContent = '取得完了';
+    document.getElementById('gps-coords').textContent =
+      `緯度: ${state.userLat.toFixed(5)}  経度: ${state.userLng.toFixed(5)}`;
+    checkGpsCheckin();
+    renderSearch();
+  }
+  function onError() {
+    document.getElementById('gps-status-text').textContent = '取得失敗';
+    document.getElementById('gps-coords').textContent = 'デモ位置(新潟市)を使用中';
+    hideGpsNotice();
+  }
+  // B5: watchPosition のみ使用
+  const watchId = navigator.geolocation.watchPosition(onSuccess, onError, opts);
+  window.addEventListener('beforeunload', () => navigator.geolocation.clearWatch(watchId));
+}
+
+// ─────────────────────────────────────────
+// 時刻
+// ─────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('status-time').textContent =
+    `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+}
+
+// ─────────────────────────────────────────
+// リアルタイム更新（20秒）
+// ─────────────────────────────────────────
+function startRealtimeUpdate() {
+  setInterval(() => {
+    if (document.visibilityState === 'hidden') return; // P1
+    userCache.clear(); // B1
+    const active = document.querySelector('.page.active');
+    if (!active) return;
+    if (active.id === 'page-home')       renderHome();
+    if (active.id === 'page-congestion') renderCongestion();
+    if (active.id === 'page-search')     renderSearch(); // M2
+    if (state.gpsEnabled) { // B3
+      state.userLat += (Math.random()-0.5)*0.00002;
+      state.userLng += (Math.random()-0.5)*0.00002;
+      checkGpsCheckin();
+    }
+  }, 20000);
+}
+
+// ─────────────────────────────────────────
+// 季節バナー (M1: innerHTML で <br> を正しく展開)
+// ─────────────────────────────────────────
+function initSeasonalBanner() {
+  const m = new Date().getMonth() + 1;
+  const seasons = [
+    { months:[3,4,5],   badge:'🌸 春のおすすめ', title:'花見帰りに<br>温泉でほっこり',        sub:'春風薫る新潟の湯めぐり<br>花の季節を湯で締めくくる', emoji:'🌸' },
+    { months:[6,7,8],   badge:'🌿 夏のおすすめ', title:'夏の露天風呂で<br>心も体もリフレッシュ', sub:'新潟の大自然に包まれた<br>開放感あふれる湯浴み体験',   emoji:'🌿' },
+    { months:[9,10,11], badge:'🍂 秋のおすすめ', title:'紅葉と湯けむりに<br>癒される秋の温泉旅', sub:'色づく山々を眺めながら<br>しみじみ湯につかる贅沢',     emoji:'🍁' },
+    { months:[12,1,2],  badge:'❄️ 冬のおすすめ', title:'雪見風呂で<br>しっぽり温まろう',        sub:'白銀の越後路で楽しむ<br>とっておきの雪景色の湯',       emoji:'❄️' },
+  ];
+  const s = seasons.find(s => s.months.includes(m)) || seasons[1];
+  document.getElementById('hero-badge').textContent  = s.badge;
+  document.getElementById('hero-title').innerHTML    = s.title; // M1: innerHTML
+  document.getElementById('hero-sub').innerHTML      = s.sub;   // M1: innerHTML（<br>を反映）
+  document.getElementById('hero-emoji').textContent  = s.emoji;
+}
+
+// ─────────────────────────────────────────
+// 初期化
+// ─────────────────────────────────────────
+function init() {
+  updateClock();
+  const msToNext = (60 - new Date().getSeconds()) * 1000;
+  setTimeout(() => { updateClock(); setInterval(updateClock, 60000); }, msToNext);
+
+  initReviews();
+  initSeasonalBanner();
+  renderHome();
+  renderSearch();
+  renderMypage();
+  startRealtimeUpdate();
+  initGPS();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
+

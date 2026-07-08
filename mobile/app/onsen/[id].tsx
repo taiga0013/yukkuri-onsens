@@ -1,0 +1,466 @@
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { CongestionBadge } from '../../components/CongestionBadge';
+import { PhotoSlider } from '../../components/PhotoSlider';
+import { ProgressBar } from '../../components/ProgressBar';
+import { useTheme } from '../../constants/theme';
+import { useAuth } from '../../context/AuthContext';
+import { useFavorites } from '../../context/FavoritesContext';
+import { useOnsenData } from '../../context/OnsenDataContext';
+import { useCheckin } from '../../hooks/useCheckin';
+import { useReviews } from '../../hooks/useReviews';
+import type { Review } from '../../types/onsen';
+import { getCongestionLevel } from '../../types/onsen';
+
+type SortMode = 'high' | 'low' | 'newest' | 'oldest';
+const SORTS: { key: SortMode; label: string }[] = [
+  { key: 'high', label: '評価が高い順' },
+  { key: 'low', label: '評価が低い順' },
+  { key: 'newest', label: '最新のレビュー順' },
+  { key: 'oldest', label: '最も古いレビュー順' },
+];
+
+const REPORT_CATEGORIES: { label: string; value: 'spam' | 'abusive' | 'irrelevant' | 'other' }[] = [
+  { label: 'スパム・宣伝', value: 'spam' },
+  { label: '不適切な表現・誹謗中傷', value: 'abusive' },
+  { label: '無関係なコンテンツ', value: 'irrelevant' },
+  { label: 'その他', value: 'other' },
+];
+
+export default function OnsenDetailScreen() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { colors, congestion: semantic, radius, type } = useTheme();
+  const { isFavorite, toggleFavorite } = useFavorites();
+  const { onsens, getCongestion, loadingOnsens } = useOnsenData();
+  const { isMock } = useAuth();
+
+  const onsen = onsens.find((o) => o.id === id);
+  const { reviews: fetchedReviews, submitReview: submitReviewRemote, reportReview: reportReviewRemote } = useReviews(id);
+  const { isCheckedIn, loading: checkinLoading, checkIn, checkOut, isAvailable: checkinAvailable } = useCheckin(id);
+  const [localReviews, setLocalReviews] = useState<Review[]>([]);
+  const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [composing, setComposing] = useState(false);
+  const [draftRating, setDraftRating] = useState<1 | 2 | 3 | 4 | 5>(5);
+  const [draftText, setDraftText] = useState('');
+
+  const congestionData = useMemo(() => (onsen ? getCongestion(onsen.id) : null), [onsen, getCongestion]);
+  const allReviews = useMemo(
+    () => (isMock ? [...localReviews, ...fetchedReviews] : fetchedReviews),
+    [isMock, localReviews, fetchedReviews],
+  );
+  const sortedReviews = useMemo(() => {
+    const list = [...allReviews];
+    switch (sortMode) {
+      case 'high':
+        return list.sort((a, b) => b.rating - a.rating);
+      case 'low':
+        return list.sort((a, b) => a.rating - b.rating);
+      case 'oldest':
+        return list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      default:
+        return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+  }, [allReviews, sortMode]);
+
+  if (!onsen || !congestionData) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
+        {loadingOnsens ? (
+          <ActivityIndicator color={colors.accent} />
+        ) : (
+          <Text style={{ color: colors.ink }}>温泉地が見つかりませんでした</Text>
+        )}
+      </View>
+    );
+  }
+
+  const levelColor = {
+    empty: semantic.empty,
+    normal: semantic.normal,
+    busy: semantic.busy,
+  }[getCongestionLevel(congestionData.congestionRate)];
+
+  const submitReview = async () => {
+    if (!draftText.trim()) return;
+
+    if (isMock) {
+      setLocalReviews((prev) => [
+        {
+          id: `local_${Date.now()}`,
+          onsenId: onsen.id,
+          userName: '湯めぐりユーザー',
+          userAvatar: 'https://picsum.photos/seed/avatar-a/100/100',
+          rating: draftRating,
+          comment: draftText.trim(),
+          createdAt: new Date().toISOString(),
+          status: 'visible',
+        },
+        ...prev,
+      ]);
+    } else {
+      const { error } = await submitReviewRemote(draftRating, draftText.trim());
+      if (error) {
+        Alert.alert('投稿に失敗しました', error);
+        return;
+      }
+    }
+    setDraftText('');
+    setDraftRating(5);
+    setComposing(false);
+  };
+
+  const reportReview = (reviewId: string) => {
+    Alert.alert(
+      '通報カテゴリを選択',
+      undefined,
+      [
+        ...REPORT_CATEGORIES.map((c) => ({
+          text: c.label,
+          onPress: async () => {
+            if (!isMock) await reportReviewRemote(reviewId, c.value);
+            Alert.alert('通報を受け付けました');
+          },
+        })),
+        { text: 'キャンセル', style: 'cancel' as const },
+      ],
+    );
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <ScrollView bounces={false}>
+        <View>
+          <PhotoSlider photos={onsen.photos} />
+          <Pressable
+            onPress={() => router.back()}
+            style={[styles.floatBtn, { top: insets.top + 10, left: 14, backgroundColor: colors.bgOverlay }]}
+          >
+            <Ionicons name="close" size={20} color="#fff" />
+          </Pressable>
+          <Pressable
+            onPress={() => toggleFavorite(onsen.id)}
+            style={[styles.floatBtn, { top: insets.top + 10, right: 14, backgroundColor: colors.bgOverlay }]}
+          >
+            <Ionicons name={isFavorite(onsen.id) ? 'star' : 'star-outline'} size={19} color={colors.accentStrong} />
+          </Pressable>
+        </View>
+
+        <View style={{ padding: 20, gap: 22 }}>
+          {/* 基本情報 */}
+          <View style={{ gap: 6 }}>
+            <Text style={[styles.name, { color: colors.ink, fontSize: type.display }]}>{onsen.name}</Text>
+            <Text style={{ color: colors.inkFaint, fontSize: 12.5 }}>
+              {onsen.prefecture}
+              {onsen.city}
+              {onsen.area}
+            </Text>
+            <Text style={{ color: colors.inkDim, fontSize: 13 }}>運営時間 {onsen.hours}</Text>
+
+            <View style={{ marginTop: 8, gap: 8 }}>
+              <View style={styles.rowBetween}>
+                <Text style={{ color: colors.inkDim, fontSize: 13 }}>
+                  利用人数 <Text style={{ color: colors.ink, fontWeight: '700' }}>{congestionData.usersCount}人</Text> ・ 組数{' '}
+                  <Text style={{ color: colors.ink, fontWeight: '700' }}>{congestionData.groupsCount}組</Text>
+                </Text>
+                <CongestionBadge rate={congestionData.congestionRate} />
+              </View>
+              <ProgressBar rate={congestionData.congestionRate} color={levelColor} height={7} />
+
+              <View style={[styles.genderCard, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+                <GenderStat label="男湯" count={congestionData.male.usersCount} rate={congestionData.male.congestionRate} color={semantic.normal} />
+                <View style={[styles.vDivider, { backgroundColor: colors.rule }]} />
+                <GenderStat label="女湯" count={congestionData.female.usersCount} rate={congestionData.female.congestionRate} color={semantic.busy} />
+              </View>
+
+              {checkinAvailable ? (
+                <Pressable
+                  disabled={checkinLoading}
+                  onPress={async () => {
+                    const { error } = isCheckedIn ? await checkOut() : await checkIn();
+                    if (error) Alert.alert('エラー', error);
+                  }}
+                  style={[
+                    styles.checkinBtn,
+                    {
+                      backgroundColor: isCheckedIn ? colors.bgRaised : colors.accent,
+                      borderColor: colors.accent,
+                      opacity: checkinLoading ? 0.6 : 1,
+                    },
+                  ]}
+                >
+                  <Ionicons name={isCheckedIn ? 'log-out-outline' : 'log-in-outline'} size={17} color={isCheckedIn ? colors.accentStrong : colors.onAccent} />
+                  <Text style={{ color: isCheckedIn ? colors.accentStrong : colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>
+                    {isCheckedIn ? 'チェックアウトする' : 'チェックインする'}
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+
+          <Divider />
+
+          {/* 設備情報 */}
+          <View>
+            <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>設備情報</Text>
+            <View style={styles.featureGrid}>
+              <FeatureItem icon="hot-tub" label="露天風呂" on={onsen.features.rotenburo} />
+              <FeatureItem icon="fire" label="サウナ" on={onsen.features.sauna} />
+              <FeatureItem icon="silverware-fork-knife" label="食事処" on={onsen.features.restaurant} />
+              <FeatureItem icon="parking" label="駐車場" on={onsen.features.parking} />
+            </View>
+          </View>
+
+          <Divider />
+
+          {/* 料金・アクセス */}
+          <View style={{ gap: 10 }}>
+            <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>料金・アクセス</Text>
+            <Text style={{ color: colors.ink, fontSize: 14 }}>
+              入浴料金　大人 {onsen.price.adult}円 / 子供 {onsen.price.child}円
+            </Text>
+            <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
+            <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>
+              {onsen.prefecture}
+              {onsen.city}
+              {onsen.area}
+            </Text>
+            <Pressable style={styles.linkRow} onPress={() => Linking.openURL(`tel:${onsen.phone}`)}>
+              <Ionicons name="call-outline" size={16} color={colors.accentStrong} />
+              <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>{onsen.phone}</Text>
+            </Pressable>
+            <Pressable style={styles.linkRow} onPress={() => Linking.openURL(onsen.website)}>
+              <Ionicons name="globe-outline" size={16} color={colors.accentStrong} />
+              <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>公式サイトを開く</Text>
+            </Pressable>
+          </View>
+
+          <Divider />
+
+          {/* 季節・休業情報 */}
+          <View style={{ gap: 8 }}>
+            <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>季節・休業情報</Text>
+            {onsen.isTemporarilyClosed ? (
+              <View style={[styles.closedBanner, { backgroundColor: colors.danger, borderRadius: radius.md }]}>
+                <Text style={styles.closedBannerText}>現在休業中</Text>
+              </View>
+            ) : null}
+            <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>定休日：{onsen.regularHoliday}</Text>
+            {onsen.winterClosure.enabled ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>
+                冬季休業：{onsen.winterClosure.start}〜{onsen.winterClosure.end}
+              </Text>
+            ) : null}
+          </View>
+
+          <Divider />
+
+          {/* 説明欄 */}
+          <View style={{ gap: 10 }}>
+            <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>この温泉について</Text>
+            <Text style={{ color: colors.inkDim, fontSize: 14, lineHeight: 22 }}>{onsen.description}</Text>
+            <Text style={{ color: colors.ink, fontSize: 13 }}>
+              泉質・成分：<Text style={{ color: colors.inkDim }}>{onsen.components}</Text>
+            </Text>
+            <Text style={{ color: colors.ink, fontSize: 13 }}>
+              効能・効果：<Text style={{ color: colors.inkDim }}>{onsen.effects}</Text>
+            </Text>
+          </View>
+
+          {/* アクションボタン */}
+          <View style={styles.actionRow}>
+            <Pressable
+              onPress={() => toggleFavorite(onsen.id)}
+              style={[styles.actionBtn, { backgroundColor: isFavorite(onsen.id) ? colors.accent : colors.bgRaised, borderColor: colors.accent }]}
+            >
+              <Ionicons name={isFavorite(onsen.id) ? 'star' : 'star-outline'} size={17} color={isFavorite(onsen.id) ? colors.onAccent : colors.accentStrong} />
+              <Text style={{ color: isFavorite(onsen.id) ? colors.onAccent : colors.accentStrong, fontWeight: '700', fontSize: 13.5 }}>
+                {isFavorite(onsen.id) ? 'お気に入り解除' : 'お気に入り登録'}
+              </Text>
+            </Pressable>
+            <Pressable onPress={() => router.back()} style={[styles.actionBtn, { backgroundColor: colors.bgRaised, borderColor: colors.rule }]}>
+              <Ionicons name="close" size={17} color={colors.inkDim} />
+              <Text style={{ color: colors.inkDim, fontWeight: '700', fontSize: 13.5 }}>閉じる</Text>
+            </Pressable>
+          </View>
+
+          <Divider />
+
+          {/* 口コミ */}
+          <View style={{ gap: 12 }}>
+            <View style={styles.rowBetween}>
+              <Text style={[styles.sectionTitle, { color: colors.inkFaint, marginBottom: 0 }]}>口コミ（{allReviews.length}件）</Text>
+              <Pressable onPress={() => setComposing((v) => !v)}>
+                <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: '700' }}>
+                  {composing ? '閉じる' : '口コミを投稿する'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {composing ? (
+              <View style={[styles.composer, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Pressable key={n} onPress={() => setDraftRating(n as 1 | 2 | 3 | 4 | 5)}>
+                      <Ionicons
+                        name={n <= draftRating ? 'star' : 'star-outline'}
+                        size={22}
+                        color={colors.accentStrong}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  value={draftText}
+                  onChangeText={setDraftText}
+                  placeholder="感想を自由に書いてください"
+                  placeholderTextColor={colors.inkFaint}
+                  multiline
+                  style={[styles.composerInput, { color: colors.ink, borderColor: colors.rule }]}
+                />
+                <Pressable onPress={submitReview} style={[styles.submitBtn, { backgroundColor: colors.accent }]}>
+                  <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>投稿する</Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {SORTS.map((s) => (
+                <Pressable
+                  key={s.key}
+                  onPress={() => setSortMode(s.key)}
+                  style={[
+                    styles.sortChip,
+                    {
+                      backgroundColor: sortMode === s.key ? colors.accent : colors.bgInset,
+                      borderRadius: radius.pill,
+                    },
+                  ]}
+                >
+                  <Text style={{ color: sortMode === s.key ? colors.onAccent : colors.inkDim, fontSize: 11.5, fontWeight: '600' }}>
+                    {s.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={{ gap: 12 }}>
+              {sortedReviews.map((r) => (
+                <ReviewCard key={r.id} review={r} onReport={() => reportReview(r.id)} />
+              ))}
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+function GenderStat({ label, count, rate, color }: { label: string; count: number; rate: number; color: string }) {
+  const { colors } = useTheme();
+  return (
+    <View style={{ flex: 1, gap: 4 }}>
+      <Text style={{ color: colors.inkDim, fontSize: 11.5, fontWeight: '600' }}>{label}</Text>
+      <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '700' }}>
+        {count}人 <Text style={{ color: colors.inkFaint, fontWeight: '400' }}>({rate}%)</Text>
+      </Text>
+      <ProgressBar rate={rate} color={color} height={4} />
+    </View>
+  );
+}
+
+function FeatureItem({ icon, label, on }: { icon: string; label: string; on: boolean }) {
+  const { colors, radius } = useTheme();
+  return (
+    <View style={[styles.featureItem, { backgroundColor: colors.bgRaised, borderColor: colors.rule, borderRadius: radius.md, opacity: on ? 1 : 0.35 }]}>
+      <MaterialCommunityIcons name={icon as any} size={22} color={on ? colors.accentStrong : colors.inkFaint} />
+      <Text style={{ color: on ? colors.ink : colors.inkFaint, fontSize: 11.5, marginTop: 4 }}>{label}</Text>
+    </View>
+  );
+}
+
+function ReviewCard({ review, onReport }: { review: Review; onReport: () => void }) {
+  const { colors, radius } = useTheme();
+  return (
+    <View style={[styles.reviewCard, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+      <View style={styles.rowBetween}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View style={[styles.avatarSmall, { backgroundColor: colors.bgInset }]} />
+          <View>
+            <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '700' }}>{review.userName}</Text>
+            <View style={{ flexDirection: 'row', gap: 1, marginTop: 2 }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Ionicons key={n} name={n <= review.rating ? 'star' : 'star-outline'} size={11} color={colors.accentStrong} />
+              ))}
+            </View>
+          </View>
+        </View>
+        <Pressable onPress={onReport} hitSlop={10}>
+          <Ionicons name="ellipsis-horizontal" size={16} color={colors.inkFaint} />
+        </Pressable>
+      </View>
+      <Text style={{ color: colors.inkDim, fontSize: 13, marginTop: 8, lineHeight: 19 }}>{review.comment}</Text>
+      <Text style={{ color: colors.inkFaint, fontSize: 10.5, marginTop: 8 }}>
+        {new Date(review.createdAt).toLocaleDateString('ja-JP')}
+      </Text>
+    </View>
+  );
+}
+
+function Divider() {
+  const { colors } = useTheme();
+  return <View style={{ height: 1, backgroundColor: colors.rule }} />;
+}
+
+const styles = StyleSheet.create({
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  floatBtn: {
+    position: 'absolute',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: { fontWeight: '800' },
+  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  genderCard: { flexDirection: 'row', padding: 12, borderWidth: 1 },
+  checkinBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  vDivider: { width: 1, marginHorizontal: 14 },
+  sectionTitle: { fontSize: 11.5, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 12 },
+  featureGrid: { flexDirection: 'row', gap: 10 },
+  featureItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderWidth: 1 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  closedBanner: { paddingVertical: 10, alignItems: 'center' },
+  closedBannerText: { color: '#fff', fontWeight: '800', fontSize: 13.5 },
+  actionRow: { flexDirection: 'row', gap: 10 },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderRadius: 12,
+  },
+  composer: { padding: 14, borderWidth: 1, gap: 10 },
+  composerInput: { minHeight: 70, borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 13.5, textAlignVertical: 'top' },
+  submitBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10 },
+  sortChip: { paddingHorizontal: 12, paddingVertical: 7 },
+  reviewCard: { padding: 14, borderWidth: 1 },
+  avatarSmall: { width: 28, height: 28, borderRadius: 14 },
+});
