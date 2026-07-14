@@ -23,19 +23,41 @@ npx supabase link --project-ref <あなたのproject ref>
 npx supabase db push
 ```
 
-`supabase/migrations/` 配下の4つのマイグレーションが順番に適用されます:
+`supabase/migrations/` 配下の5つのマイグレーションが順番に適用されます:
 - `20260708000001_schema.sql` — テーブル定義・onsen_live_statusビュー
 - `20260708000002_rls.sql` — RLSポリシー・公開ビュー
 - `20260708000003_functions.sql` — checkin/checkout/heartbeat・TTL自動チェックアウト・オーナー編集RPC
 - `20260708000004_home_queries.sql` — おすすめ/人気ランキング用の補助スキーマ
+- `20260708000005_seed_onsens.sql` — 初期シードデータ（主要温泉地10件）
 
 CLIでのpushが失敗する場合は、各SQLファイルの中身をDashboard > SQL Editorに順番に貼り付けて実行してください。
 
+CLI実行時、Windows環境（特にGit Bash/WSL）では作業ディレクトリの認識に注意してください。
+`supabase/.temp/project-ref` にリンク情報が保存されるため、**必ずリポジトリ直下（`onsen/`）に`cd`してから**
+コマンドを実行する必要があります。WSLの場合はパスが `/mnt/c/Users/<ユーザー名>/...` になります
+（Git Bashの `/c/Users/...` とは異なります）。
+
 ### pg_cronの有効化（TTL自動チェックアウトに必要）
 
-Dashboard > Database > Extensions で `pg_cron` を有効化した後、`20260708000003_functions.sql` 内の
-`do $$ ... end $$` ブロック（`cron.schedule(...)` の部分）だけを再実行してください
-（先に有効化しないと該当ブロックは無視されるようになっています）。
+Dashboard > Database > Extensions で検索しても `pg_cron` が見つからない場合は、SQL Editorで直接有効化できます:
+
+```sql
+create extension if not exists pg_cron schema cron;
+
+select cron.schedule(
+  'ttl-auto-checkout',
+  '*/10 * * * *',
+  $$select public.ttl_auto_checkout();$$
+);
+```
+
+（`20260708000003_functions.sql`内の`do $$ ... end $$`ブロックは、pg_cronが未有効の状態でpushすると
+自動的にスキップされる仕組みになっているため、有効化後は上記のように手動でスケジュール登録が必要です。）
+
+確認は以下のSQLで:
+```sql
+select jobid, jobname, schedule, active from cron.job;
+```
 
 ## 3. Google OAuthを設定する
 
@@ -74,13 +96,26 @@ iOSの場合、`app.json` の `@react-native-google-signin/google-signin` プラ
 
 ```bash
 npx supabase functions deploy notify
-npx supabase secrets set SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=<service_roleキー>
 ```
 
-Dashboard > Database > Webhooks で以下を作成し、どちらもURLに上記でデプロイした `notify` FunctionのURLを指定:
-- `checkins` テーブルの `INSERT` と `UPDATE` イベント
-- `onsens` テーブルの `UPDATE` イベント（`is_temporarily_closed` 変更時の休業通知用）
+`SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` は手動設定不要です。Supabaseが全Edge Functionに
+自動的に注入する予約済み環境変数のため、`supabase secrets set`では設定できません（設定しようとすると
+「Env name cannot start with SUPABASE_」というエラーになりますが、これは正常な仕様です）。
+
+Database Webhooksの作成場所は **Dashboard > Integrations > Database Webhooks**（「Database」メニュー内の
+「Webhooks」ではありません。Database内の「Triggers」でもありません）。以下を2つ作成:
+
+1. **名前**: `notify-checkin` / **テーブル**: `public.checkins` / **イベント**: Insert・Update /
+   **Webhookの種類**: Supabase Edge Functions / **関数**: `notify` / **Method**: POST
+2. **名前**: `notify-closure` / **テーブル**: `public.onsens` / **イベント**: Update のみ /
+   **Webhookの種類**: Supabase Edge Functions / **関数**: `notify` / **Method**: POST
+
+Edge Function選択時、HTTPヘッダーに`Authorization: Bearer <service_role JWT>`が自動追加されますが、
+これは削除しないでください（Webhook呼び出しの認証に必須です）。
+
+※ Supabase Dashboardの表示言語がブラウザの自動翻訳機能で日本語化されている場合、
+「POST」が「役職」、「GET」が「得る」、テーブル名の一部が直訳されるなど紛らわしい表示になることがあります。
+迷ったら自動翻訳をオフにして英語表示で作業することを推奨します。
 
 ## 5. 実機での動作確認について
 
@@ -93,11 +128,13 @@ Dashboard > Database > Webhooks で以下を作成し、どちらもURLに上記
 
 ## 6. 動作確認チェックリスト
 
-- [ ] `mobile/.env.local` 設定後、アプリ起動時に自動的に `/login` へ遷移する
-- [ ] Googleでログインでき、`profiles` テーブルに自分の行が作成される
+- [x] Supabaseプロジェクト作成・DBスキーマ/RLS/RPC適用・施設データ10件投入
+- [x] pg_cron有効化・TTL自動チェックアウトのスケジュール登録
+- [x] Google OAuth（Web client）・Supabase Auth連携・`mobile/.env.local`設定
+- [x] Edge Function `notify` デプロイ・Database Webhooks 2件設定
+- [ ] `mobile/.env.local` 設定後、アプリ起動時に自動的に `/login` へ遷移する（実機ビルドが必要）
+- [ ] Googleでログインでき、`profiles` テーブルに自分の行が作成される（実機ビルドが必要）
 - [ ] ホーム/探す/混雑状況画面がSupabaseの `onsens` / `onsen_live_status` から実データを表示する
-  （表示するには `onsens` テーブルに施設データを登録する必要があります。管理者ダッシュボードは未実装のため、
-  現時点ではSQL Editorから直接INSERTしてください）
 - [ ] 温泉地に近づく（またはGPSオフ時は詳細画面の「チェックインする」ボタン）でチェックインが記録される
 - [ ] チェックイン/チェックアウトでプッシュ通知が届く
 - [ ] レビュー投稿・通報（3件到達 or 誹謗中傷1件で「審査中」に自動切替）が機能する
