@@ -76,6 +76,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isSupabaseConfigured || !supabase) {
       throw new Error('Supabaseが未設定のためログインできません（SETUP.md参照）');
     }
+
+    // Web版: ネイティブGoogleサインインSDKが使えないため、Supabaseの
+    // OAuthリダイレクトフローを使う（ブラウザがGoogleの同意画面へ遷移する）。
+    if (Platform.OS === 'web') {
+      const origin = (globalThis as any).location?.origin;
+      const redirectTo = origin ? `${origin}/auth/callback` : undefined;
+      const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
+      if (error) throw error;
+      return;
+    }
+
     ensureGoogleConfigured();
     if (!googleConfigured) {
       throw new Error('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID が未設定です（SETUP.md参照）');
@@ -95,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = async () => {
     if (!isSupabaseConfigured || !supabase) return;
     await supabase.auth.signOut();
+    if (Platform.OS === 'web') return;
     try {
       await GoogleSignin.signOut();
     } catch {

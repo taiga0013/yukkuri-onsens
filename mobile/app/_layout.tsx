@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { Redirect, Stack } from 'expo-router';
+import { Redirect, Stack, usePathname } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ActivityIndicator, View } from 'react-native';
@@ -13,6 +13,7 @@ import { OnsenDataProvider } from '../context/OnsenDataContext';
 function Navigation() {
   const { colors, scheme } = useTheme();
   const { loading, session, isMock } = useAuth();
+  const pathname = usePathname();
 
   if (loading) {
     return (
@@ -22,7 +23,12 @@ function Navigation() {
     );
   }
 
-  const requiresLogin = !isMock && !session;
+  const authenticated = isMock || Boolean(session);
+  const onAuthScreen = pathname === '/login' || pathname === '/auth/callback';
+  const requiresLogin = !authenticated && !onAuthScreen;
+  // OAuthコールバック直後などでセッション確立済みなのに/loginや/auth/callbackに
+  // 留まっている場合はホームへ戻す
+  const shouldLeaveAuthScreens = authenticated && onAuthScreen;
 
   return (
     <>
@@ -34,6 +40,7 @@ function Navigation() {
         }}
       >
         <Stack.Screen name="login" />
+        <Stack.Screen name="auth/callback" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="onsen/[id]"
@@ -44,6 +51,7 @@ function Navigation() {
         />
       </Stack>
       {requiresLogin ? <Redirect href="/login" /> : null}
+      {shouldLeaveAuthScreens ? <Redirect href="/" /> : null}
       <DeviceCapabilities />
     </>
   );

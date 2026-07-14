@@ -117,6 +117,25 @@ Edge Function選択時、HTTPヘッダーに`Authorization: Bearer <service_role
 「POST」が「役職」、「GET」が「得る」、テーブル名の一部が直訳されるなど紛らわしい表示になることがあります。
 迷ったら自動翻訳をオフにして英語表示で作業することを推奨します。
 
+## 4-1. Web版でのログイン（Apple Developer Programなしで検証したい場合）
+
+`@react-native-google-signin/google-signin`はネイティブ専用のため、Web（`expo start --web`）では
+Supabaseの標準的なOAuthリダイレクトフロー（`signInWithOAuth`）にフォールバックする実装にしてあります
+（`context/AuthContext.tsx`・`app/auth/callback.tsx`）。iPhone実機がなくAndroidも無い場合、
+これでログイン・データ表示・レビュー投稿など（GPS/プッシュ通知以外）をブラウザだけで検証できます。
+
+設定が必要な箇所:
+
+1. **Supabase > Authentication > URL Configuration > Redirect URLs** に
+   `http://localhost:8081/**` を追加
+2. **Google Cloud Console** の `Web client` について:
+   - 「承認済みのリダイレクト URI」に `https://<project-ref>.supabase.co/auth/v1/callback` が登録済みか確認
+   - **クライアント シークレットは作成時に一度しか全文表示されない**（Googleの仕様）。
+     `****`のようなマスク表示しか無く、元の値が分からなくなった場合は「+ シークレットを追加」で
+     新しいシークレットを発行し、Supabase側のClient Secret欄を新しい値で上書きする
+3. ログイン時に `Unable to exchange external code` エラーが出る場合は、上記のClient Secret不一致が
+   ほぼ確実な原因
+
 ## 5. 実機での動作確認について
 
 `@react-native-google-signin/google-signin` ・GPSジオフェンシング（`expo-location` + `expo-task-manager`）・
@@ -132,10 +151,10 @@ Edge Function選択時、HTTPヘッダーに`Authorization: Bearer <service_role
 - [x] pg_cron有効化・TTL自動チェックアウトのスケジュール登録
 - [x] Google OAuth（Web client）・Supabase Auth連携・`mobile/.env.local`設定
 - [x] Edge Function `notify` デプロイ・Database Webhooks 2件設定
-- [ ] `mobile/.env.local` 設定後、アプリ起動時に自動的に `/login` へ遷移する（実機ビルドが必要）
-- [ ] Googleでログインでき、`profiles` テーブルに自分の行が作成される（実機ビルドが必要）
-- [ ] ホーム/探す/混雑状況画面がSupabaseの `onsens` / `onsen_live_status` から実データを表示する
-- [ ] 温泉地に近づく（またはGPSオフ時は詳細画面の「チェックインする」ボタン）でチェックインが記録される
+- [x] `mobile/.env.local` 設定後、アプリ起動時に自動的に `/login` へ遷移する（Web版で確認済み）
+- [x] Googleでログインでき、`profiles` テーブルに自分の行が作成される（Web版で確認済み）
+- [x] ホーム/探す/混雑状況画面がSupabaseの `onsens` / `onsen_live_status` から実データを表示する（Web版で確認済み）
+- [ ] 温泉地に近づく（またはGPSオフ時は詳細画面の「チェックインする」ボタン）でチェックインが記録される（実機ビルドが必要）
 - [ ] チェックイン/チェックアウトでプッシュ通知が届く
 - [ ] レビュー投稿・通報（3件到達 or 誹謗中傷1件で「審査中」に自動切替）が機能する
 

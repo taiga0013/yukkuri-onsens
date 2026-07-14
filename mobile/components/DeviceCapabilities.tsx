@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
+import { Platform } from 'react-native';
 
 import { useAuth } from '../context/AuthContext';
 import { useOnsenData } from '../context/OnsenDataContext';
@@ -18,6 +19,8 @@ export function DeviceCapabilities() {
   const setupDoneRef = useRef(false);
 
   useEffect(() => {
+    // GPSジオフェンシング・プッシュ通知トークン取得はネイティブ専用機能のためWebではスキップする
+    if (Platform.OS === 'web') return;
     if (isMock || !session || !profile || onsens.length === 0 || setupDoneRef.current) return;
     setupDoneRef.current = true;
 
