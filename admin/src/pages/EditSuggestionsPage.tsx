@@ -37,7 +37,7 @@ export function EditSuggestionsPage() {
     setError(null);
     const { data, error } = await supabase
       .from('onsen_edit_suggestions')
-      .select('*, onsens(name), profiles(display_name)')
+      .select('*, onsens(name), profiles!onsen_edit_suggestions_user_id_fkey(display_name)')
       .order('created_at', { ascending: false });
 
     if (error) {
