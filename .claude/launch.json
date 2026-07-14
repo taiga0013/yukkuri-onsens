@@ -7,6 +7,13 @@
       "runtimeArgs": ["run", "web"],
       "cwd": "mobile",
       "port": 8081
+    },
+    {
+      "name": "admin-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "admin",
+      "port": 5173
     }
   ]
 }
