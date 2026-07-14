@@ -2,10 +2,12 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { Layout } from './components/Layout';
 import { useAuth } from './context/AuthContext';
+import { EditSuggestionsPage } from './pages/EditSuggestionsPage';
 import { LoginPage } from './pages/LoginPage';
 import { NotAuthorizedPage } from './pages/NotAuthorizedPage';
 import { OnsenFormPage } from './pages/OnsenFormPage';
 import { OnsensPage } from './pages/OnsensPage';
+import { OwnerApplicationsPage } from './pages/OwnerApplicationsPage';
 import { ReviewsPage } from './pages/ReviewsPage';
 
 export default function App() {
@@ -29,6 +31,8 @@ export default function App() {
         <Route path="/onsens" element={<OnsensPage />} />
         <Route path="/onsens/:id" element={<OnsenFormPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
+        <Route path="/owner-applications" element={<OwnerApplicationsPage />} />
+        <Route path="/edit-suggestions" element={<EditSuggestionsPage />} />
         <Route path="*" element={<Navigate to="/onsens" replace />} />
       </Route>
     </Routes>

@@ -68,3 +68,26 @@ export interface ReviewReportRow {
   category: 'spam' | 'abusive' | 'irrelevant' | 'other';
   created_at: string;
 }
+
+export interface OwnerApplicationRow {
+  id: string;
+  user_id: string;
+  onsen_id: string;
+  message: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+export interface OnsenEditSuggestionRow {
+  id: string;
+  onsen_id: string;
+  user_id: string;
+  proposed_changes: Record<string, string | number>;
+  note: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}

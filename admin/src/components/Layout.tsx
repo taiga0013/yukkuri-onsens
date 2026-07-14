@@ -16,6 +16,12 @@ export function Layout() {
           <NavLink to="/reviews" className={({ isActive }) => (isActive ? 'active' : '')}>
             レビュー管理
           </NavLink>
+          <NavLink to="/owner-applications" className={({ isActive }) => (isActive ? 'active' : '')}>
+            オーナー申請
+          </NavLink>
+          <NavLink to="/edit-suggestions" className={({ isActive }) => (isActive ? 'active' : '')}>
+            情報修正提案
+          </NavLink>
         </nav>
         <div className="header-right">
           <span className="muted">{profile?.display_name}</span>

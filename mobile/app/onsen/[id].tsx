@@ -12,6 +12,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { useOnsenData } from '../../context/OnsenDataContext';
 import { useCheckin } from '../../hooks/useCheckin';
+import { useOnsenSuggestions } from '../../hooks/useOnsenSuggestions';
 import { useReviews } from '../../hooks/useReviews';
 import type { Review } from '../../types/onsen';
 import { getCongestionLevel } from '../../types/onsen';
@@ -43,11 +44,24 @@ export default function OnsenDetailScreen() {
   const onsen = onsens.find((o) => o.id === id);
   const { reviews: fetchedReviews, submitReview: submitReviewRemote, reportReview: reportReviewRemote } = useReviews(id);
   const { isCheckedIn, loading: checkinLoading, checkIn, checkOut, isAvailable: checkinAvailable } = useCheckin(id);
+  const { submitEditSuggestion, submitOwnerApplication, isAvailable: suggestionsAvailable } = useOnsenSuggestions(id);
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [composing, setComposing] = useState(false);
   const [draftRating, setDraftRating] = useState<1 | 2 | 3 | 4 | 5>(5);
   const [draftText, setDraftText] = useState('');
+
+  const [editingInfo, setEditingInfo] = useState(false);
+  const [editHours, setEditHours] = useState('');
+  const [editPriceAdult, setEditPriceAdult] = useState('');
+  const [editPriceChild, setEditPriceChild] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [editNote, setEditNote] = useState('');
+  const [submittingEdit, setSubmittingEdit] = useState(false);
+
+  const [applyingOwner, setApplyingOwner] = useState(false);
+  const [ownerMessage, setOwnerMessage] = useState('');
+  const [submittingOwner, setSubmittingOwner] = useState(false);
 
   const congestionData = useMemo(() => (onsen ? getCongestion(onsen.id) : null), [onsen, getCongestion]);
   const allReviews = useMemo(
@@ -130,6 +144,42 @@ export default function OnsenDetailScreen() {
         { text: 'キャンセル', style: 'cancel' as const },
       ],
     );
+  };
+
+  const submitInfoCorrection = async () => {
+    setSubmittingEdit(true);
+    const changes: Record<string, string | number> = {};
+    if (editHours.trim()) changes.hours = editHours.trim();
+    if (editPriceAdult.trim()) changes.price_adult = Number(editPriceAdult);
+    if (editPriceChild.trim()) changes.price_child = Number(editPriceChild);
+    if (editPhone.trim()) changes.phone = editPhone.trim();
+
+    const { error } = await submitEditSuggestion(changes, editNote);
+    setSubmittingEdit(false);
+    if (error) {
+      Alert.alert('送信に失敗しました', error);
+      return;
+    }
+    Alert.alert('ご協力ありがとうございます', '修正提案を受け付けました。管理者の確認後に反映されます。');
+    setEditHours('');
+    setEditPriceAdult('');
+    setEditPriceChild('');
+    setEditPhone('');
+    setEditNote('');
+    setEditingInfo(false);
+  };
+
+  const submitOwnerRequest = async () => {
+    setSubmittingOwner(true);
+    const { error } = await submitOwnerApplication(ownerMessage);
+    setSubmittingOwner(false);
+    if (error) {
+      Alert.alert('送信に失敗しました', error);
+      return;
+    }
+    Alert.alert('申請を受け付けました', '管理者の承認をお待ちください。');
+    setOwnerMessage('');
+    setApplyingOwner(false);
   };
 
   return (
@@ -271,6 +321,107 @@ export default function OnsenDetailScreen() {
               効能・効果：<Text style={{ color: colors.inkDim }}>{onsen.effects}</Text>
             </Text>
           </View>
+
+          {suggestionsAvailable ? (
+            <>
+              <Divider />
+              <View style={{ gap: 12 }}>
+                <Text style={[styles.sectionTitle, { color: colors.inkFaint, marginBottom: 0 }]}>この施設について</Text>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <Pressable onPress={() => setEditingInfo((v) => !v)}>
+                    <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: '700' }}>
+                      {editingInfo ? '閉じる' : '情報を修正する'}
+                    </Text>
+                  </Pressable>
+                  <Pressable onPress={() => setApplyingOwner((v) => !v)}>
+                    <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: '700' }}>
+                      {applyingOwner ? '閉じる' : 'オーナー申請をする'}
+                    </Text>
+                  </Pressable>
+                </View>
+
+                {editingInfo ? (
+                  <View style={[styles.composer, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+                    <Text style={{ color: colors.inkFaint, fontSize: 12 }}>
+                      変更したい項目だけ入力してください。空欄は変更されません。
+                    </Text>
+                    <TextInput
+                      value={editHours}
+                      onChangeText={setEditHours}
+                      placeholder={`運営時間（現在: ${onsen.hours}）`}
+                      placeholderTextColor={colors.inkFaint}
+                      style={[styles.composerInput, styles.singleLineInput, { color: colors.ink, borderColor: colors.rule }]}
+                    />
+                    <TextInput
+                      value={editPriceAdult}
+                      onChangeText={setEditPriceAdult}
+                      placeholder={`大人料金（現在: ${onsen.price.adult}円）`}
+                      placeholderTextColor={colors.inkFaint}
+                      keyboardType="number-pad"
+                      style={[styles.composerInput, styles.singleLineInput, { color: colors.ink, borderColor: colors.rule }]}
+                    />
+                    <TextInput
+                      value={editPriceChild}
+                      onChangeText={setEditPriceChild}
+                      placeholder={`子供料金（現在: ${onsen.price.child}円）`}
+                      placeholderTextColor={colors.inkFaint}
+                      keyboardType="number-pad"
+                      style={[styles.composerInput, styles.singleLineInput, { color: colors.ink, borderColor: colors.rule }]}
+                    />
+                    <TextInput
+                      value={editPhone}
+                      onChangeText={setEditPhone}
+                      placeholder={`電話番号（現在: ${onsen.phone}）`}
+                      placeholderTextColor={colors.inkFaint}
+                      style={[styles.composerInput, styles.singleLineInput, { color: colors.ink, borderColor: colors.rule }]}
+                    />
+                    <TextInput
+                      value={editNote}
+                      onChangeText={setEditNote}
+                      placeholder="補足があれば自由にご記入ください"
+                      placeholderTextColor={colors.inkFaint}
+                      multiline
+                      style={[styles.composerInput, { color: colors.ink, borderColor: colors.rule }]}
+                    />
+                    <Pressable
+                      onPress={submitInfoCorrection}
+                      disabled={submittingEdit}
+                      style={[styles.submitBtn, { backgroundColor: colors.accent, opacity: submittingEdit ? 0.6 : 1 }]}
+                    >
+                      <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>
+                        {submittingEdit ? '送信中…' : '修正を提案する'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+
+                {applyingOwner ? (
+                  <View style={[styles.composer, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+                    <Text style={{ color: colors.inkFaint, fontSize: 12 }}>
+                      この施設のオーナー様ですか？申請いただくと管理者確認の上、料金・営業時間・休業情報を編集できるようになります。
+                    </Text>
+                    <TextInput
+                      value={ownerMessage}
+                      onChangeText={setOwnerMessage}
+                      placeholder="施設名や役職など、確認用の情報をご記入ください"
+                      placeholderTextColor={colors.inkFaint}
+                      multiline
+                      style={[styles.composerInput, { color: colors.ink, borderColor: colors.rule }]}
+                    />
+                    <Pressable
+                      onPress={submitOwnerRequest}
+                      disabled={submittingOwner}
+                      style={[styles.submitBtn, { backgroundColor: colors.accent, opacity: submittingOwner ? 0.6 : 1 }]}
+                    >
+                      <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>
+                        {submittingOwner ? '送信中…' : '申請する'}
+                      </Text>
+                    </Pressable>
+                  </View>
+                ) : null}
+              </View>
+            </>
+          ) : null}
 
           {/* アクションボタン */}
           <View style={styles.actionRow}>
@@ -459,6 +610,7 @@ const styles = StyleSheet.create({
   },
   composer: { padding: 14, borderWidth: 1, gap: 10 },
   composerInput: { minHeight: 70, borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 13.5, textAlignVertical: 'top' },
+  singleLineInput: { minHeight: 0, height: 42, textAlignVertical: 'center' },
   submitBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10 },
   sortChip: { paddingHorizontal: 12, paddingVertical: 7 },
   reviewCard: { padding: 14, borderWidth: 1 },
