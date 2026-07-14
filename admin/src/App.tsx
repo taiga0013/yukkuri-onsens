@@ -8,10 +8,11 @@ import { NotAuthorizedPage } from './pages/NotAuthorizedPage';
 import { OnsenFormPage } from './pages/OnsenFormPage';
 import { OnsensPage } from './pages/OnsensPage';
 import { OwnerApplicationsPage } from './pages/OwnerApplicationsPage';
+import { OwnerOnsensPage } from './pages/OwnerOnsensPage';
 import { ReviewsPage } from './pages/ReviewsPage';
 
 export default function App() {
-  const { loading, session, isAdmin } = useAuth();
+  const { loading, session, isAdmin, isOwner } = useAuth();
 
   if (loading) {
     return (
@@ -22,7 +23,19 @@ export default function App() {
   }
 
   if (!session) return <LoginPage />;
-  if (!isAdmin) return <NotAuthorizedPage />;
+  if (!isAdmin && !isOwner) return <NotAuthorizedPage />;
+
+  if (isOwner && !isAdmin) {
+    return (
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/" element={<Navigate to="/my-onsens" replace />} />
+          <Route path="/my-onsens" element={<OwnerOnsensPage />} />
+          <Route path="*" element={<Navigate to="/my-onsens" replace />} />
+        </Route>
+      </Routes>
+    );
+  }
 
   return (
     <Routes>

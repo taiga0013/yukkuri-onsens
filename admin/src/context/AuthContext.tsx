@@ -9,6 +9,7 @@ interface AuthContextValue {
   session: Session | null;
   profile: ProfileRow | null;
   isAdmin: boolean;
+  isOwner: boolean;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile,
       isAdmin: profile?.role === 'admin',
+      isOwner: profile?.role === 'owner',
       signInWithGoogle,
       signOut,
     }),
