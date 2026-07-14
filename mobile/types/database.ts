@@ -18,6 +18,7 @@ export interface OnsenRow {
   prefecture: string;
   city: string;
   area: string;
+  address: string | null;
   region: '上越' | '中越' | '下越';
   latitude: number;
   longitude: number;

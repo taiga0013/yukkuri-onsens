@@ -275,18 +275,14 @@ export default function OnsenDetailScreen() {
               入浴料金　大人 {onsen.price.adult}円 / 子供 {onsen.price.child}円
             </Text>
             <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
-            <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>
-              {onsen.prefecture}
-              {onsen.city}
-              {onsen.area}
-            </Text>
+            <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>{onsen.address}</Text>
             <Pressable style={styles.linkRow} onPress={() => Linking.openURL(`tel:${onsen.phone}`)}>
               <Ionicons name="call-outline" size={16} color={colors.accentStrong} />
               <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>{onsen.phone}</Text>
             </Pressable>
             <Pressable style={styles.linkRow} onPress={() => Linking.openURL(onsen.website)}>
               <Ionicons name="globe-outline" size={16} color={colors.accentStrong} />
-              <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>公式サイトを開く</Text>
+              <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>参考サイトを開く</Text>
             </Pressable>
           </View>
 

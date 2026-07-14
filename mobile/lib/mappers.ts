@@ -9,6 +9,7 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
     prefecture: row.prefecture,
     city: row.city,
     area: row.area,
+    address: row.address ?? `${row.prefecture}${row.city}${row.area}`,
     region: row.region,
     latitude: row.latitude,
     longitude: row.longitude,

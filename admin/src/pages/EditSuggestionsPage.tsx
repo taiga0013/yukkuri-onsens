@@ -21,7 +21,7 @@ const FIELD_LABEL: Record<string, string> = {
   price_adult: '大人料金',
   price_child: '子供料金',
   phone: '電話番号',
-  website: '公式サイト',
+  website: '参考サイト',
   regular_holiday: '定休日',
 };
 

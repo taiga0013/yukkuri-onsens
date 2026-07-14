@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { supabase } from '../lib/supabase';
+import { uploadOnsenPhoto } from '../lib/photoUpload';
 import type { OnsenFormValues, OnsenRow } from '../types/database';
 
 const emptyForm: OnsenFormValues = {
@@ -10,6 +11,7 @@ const emptyForm: OnsenFormValues = {
   prefecture: '新潟県',
   city: '',
   area: '',
+  address: '',
   region: '下越',
   latitude: 0,
   longitude: 0,
@@ -44,10 +46,11 @@ export function OnsenFormPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState<OnsenFormValues>(emptyForm);
-  const [photosText, setPhotosText] = useState('');
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isNew) return;
@@ -59,7 +62,6 @@ export function OnsenFormPage() {
         const row = data as OnsenRow;
         const { id: _id, created_at, updated_at, ...rest } = row;
         setForm(rest);
-        setPhotosText(row.photos.join('\n'));
       }
       setLoading(false);
     })();
@@ -69,18 +71,34 @@ export function OnsenFormPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const onFilesSelected = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    setUploadingPhoto(true);
+    for (const file of Array.from(files)) {
+      const { url, error } = await uploadOnsenPhoto(file);
+      if (error) {
+        alert(`${file.name}: ${error}`);
+        continue;
+      }
+      if (url) set('photos', [...form.photos, url]);
+    }
+    setUploadingPhoto(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removePhoto = (url: string) => {
+    set(
+      'photos',
+      form.photos.filter((p) => p !== url),
+    );
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError(null);
 
-    const payload = {
-      ...form,
-      photos: photosText
-        .split('\n')
-        .map((s) => s.trim())
-        .filter(Boolean),
-    };
+    const payload = { ...form };
 
     const result = isNew
       ? await supabase.from('onsens').insert(payload)
@@ -126,6 +144,14 @@ export function OnsenFormPage() {
               <input value={form.area} onChange={(e) => set('area', e.target.value)} required />
             </label>
           </div>
+          <label>
+            住所（詳細画面に表示される全文）
+            <input
+              value={form.address ?? ''}
+              onChange={(e) => set('address', e.target.value)}
+              placeholder="新潟県新発田市月岡温泉123-45"
+            />
+          </label>
           <label>
             地域
             <select value={form.region} onChange={(e) => set('region', e.target.value as OnsenFormValues['region'])}>
@@ -239,7 +265,7 @@ export function OnsenFormPage() {
               <input value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value)} />
             </label>
             <label>
-              公式サイト
+              参考サイト
               <input value={form.website ?? ''} onChange={(e) => set('website', e.target.value)} />
             </label>
           </div>
@@ -302,8 +328,26 @@ export function OnsenFormPage() {
             </label>
           </div>
           <label>
-            写真URL（1行に1つ）
-            <textarea value={photosText} onChange={(e) => setPhotosText(e.target.value)} rows={3} placeholder="https://...&#10;https://..." />
+            写真
+            <div className="photo-grid">
+              {form.photos.map((url) => (
+                <div key={url} className="photo-thumb">
+                  <img src={url} alt="" />
+                  <button type="button" className="photo-remove" onClick={() => removePhoto(url)}>
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => onFilesSelected(e.target.files)}
+              disabled={uploadingPhoto}
+            />
+            {uploadingPhoto ? <span className="muted">アップロード中…（最大1280px・品質80%に自動圧縮しています）</span> : null}
           </label>
         </fieldset>
 

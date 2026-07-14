@@ -32,6 +32,7 @@ export interface Onsen {
   prefecture: string;
   city: string;
   area: string;
+  address: string;
   region: Region;
   latitude: number;
   longitude: number;
