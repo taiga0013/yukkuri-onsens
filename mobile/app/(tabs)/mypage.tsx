@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SectionHeader } from '../../components/SectionHeader';
@@ -10,6 +10,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useFavorites } from '../../context/FavoritesContext';
 import { useOnsenData } from '../../context/OnsenDataContext';
 import { useRecentVisits } from '../../hooks/useRecentVisits';
+import { pickAndUploadAvatar } from '../../lib/avatarUpload';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 
 const AVATAR_SEEDS = ['avatar-a', 'avatar-b', 'avatar-c', 'avatar-d'];
@@ -41,6 +42,7 @@ export default function MyPageScreen() {
   const [gpsEnabled, setGpsEnabled] = useState(profile?.gps_enabled ?? true);
   const [notifEnabled, setNotifEnabled] = useState(profile?.notifications_enabled ?? true);
   const [reviewCount, setReviewCount] = useState(0);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const nameInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
@@ -74,10 +76,34 @@ export default function MyPageScreen() {
     persist({ display_name: name });
   };
 
-  const cycleAvatar = () => {
+  const cyclePresetAvatar = () => {
     const next = (avatarIndex + 1) % AVATAR_SEEDS.length;
     setAvatarIndex(next);
     persist({ avatar_url: `https://picsum.photos/seed/${AVATAR_SEEDS[next]}/200/200` });
+  };
+
+  const uploadFromLibrary = async () => {
+    if (!session) return;
+    setUploadingAvatar(true);
+    const { url, error } = await pickAndUploadAvatar(session.user.id);
+    setUploadingAvatar(false);
+    if (error) {
+      Alert.alert('アイコンの変更に失敗しました', error);
+      return;
+    }
+    if (url) await persist({ avatar_url: url });
+  };
+
+  const onAvatarPress = () => {
+    if (isMock) {
+      cyclePresetAvatar();
+      return;
+    }
+    Alert.alert('アイコンを変更', undefined, [
+      { text: '端末の写真から選ぶ', onPress: uploadFromLibrary },
+      { text: 'アプリオリジナルアイコンから選ぶ', onPress: cyclePresetAvatar },
+      { text: 'キャンセル', style: 'cancel' },
+    ]);
   };
 
   const avatarUri = profile?.avatar_url || `https://picsum.photos/seed/${AVATAR_SEEDS[avatarIndex]}/200/200`;
@@ -88,10 +114,14 @@ export default function MyPageScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, gap: 28, paddingBottom: 48 }}>
         {/* プロフィール */}
         <View style={styles.profileRow}>
-          <Pressable onPress={cycleAvatar}>
+          <Pressable onPress={onAvatarPress} disabled={uploadingAvatar}>
             <Image source={{ uri: avatarUri }} style={[styles.avatar, { borderColor: colors.accent }]} />
             <View style={[styles.editBadge, { backgroundColor: colors.accent }]}>
-              <Text style={{ fontSize: 10, color: colors.onAccent }}>✎</Text>
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color={colors.onAccent} />
+              ) : (
+                <Text style={{ fontSize: 10, color: colors.onAccent }}>✎</Text>
+              )}
             </View>
           </Pressable>
 
@@ -186,7 +216,7 @@ export default function MyPageScreen() {
           <SectionHeader title="アカウント設定" />
           <View style={[styles.card, { backgroundColor: colors.bgRaised, borderColor: colors.rule, borderRadius: radius.lg }]}>
             <SettingsRow label="ログイン方法" value={isMock ? '未連携（モック動作中）' : 'Google 連携済み'} />
-            <SettingsRow label="アイコン変更" value="端末の写真 / オリジナル" onPress={cycleAvatar} />
+            <SettingsRow label="アイコン変更" value="端末の写真 / オリジナル" onPress={onAvatarPress} />
             <SettingsRow label="名前変更" value={name} onPress={() => setEditingName(true)} />
             <View style={{ paddingVertical: 13 }}>
               <Text style={{ color: colors.ink, fontSize: 14.5, fontWeight: '500', marginBottom: 10 }}>性別設定</Text>
