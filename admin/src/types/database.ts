@@ -27,6 +27,8 @@ export interface OnsenRow {
   sauna: boolean;
   restaurant: boolean;
   parking: boolean;
+  has_lodging: boolean;
+  lodging_url: string | null;
   description: string | null;
   components: string | null;
   effects: string | null;

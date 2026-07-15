@@ -21,6 +21,9 @@ export function Layout() {
               <NavLink to="/owner-applications" className={({ isActive }) => (isActive ? 'active' : '')}>
                 オーナー申請
               </NavLink>
+              <NavLink to="/owner-links" className={({ isActive }) => (isActive ? 'active' : '')}>
+                オーナー管理
+              </NavLink>
               <NavLink to="/edit-suggestions" className={({ isActive }) => (isActive ? 'active' : '')}>
                 情報修正提案
               </NavLink>

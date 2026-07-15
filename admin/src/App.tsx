@@ -8,6 +8,7 @@ import { NotAuthorizedPage } from './pages/NotAuthorizedPage';
 import { OnsenFormPage } from './pages/OnsenFormPage';
 import { OnsensPage } from './pages/OnsensPage';
 import { OwnerApplicationsPage } from './pages/OwnerApplicationsPage';
+import { OwnerLinksPage } from './pages/OwnerLinksPage';
 import { OwnerOnsensPage } from './pages/OwnerOnsensPage';
 import { ReviewsPage } from './pages/ReviewsPage';
 
@@ -45,6 +46,7 @@ export default function App() {
         <Route path="/onsens/:id" element={<OnsenFormPage />} />
         <Route path="/reviews" element={<ReviewsPage />} />
         <Route path="/owner-applications" element={<OwnerApplicationsPage />} />
+        <Route path="/owner-links" element={<OwnerLinksPage />} />
         <Route path="/edit-suggestions" element={<EditSuggestionsPage />} />
         <Route path="*" element={<Navigate to="/onsens" replace />} />
       </Route>

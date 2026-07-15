@@ -20,6 +20,8 @@ const emptyForm: OnsenFormValues = {
   sauna: false,
   restaurant: false,
   parking: false,
+  has_lodging: false,
+  lodging_url: '',
   description: '',
   components: '',
   effects: '',
@@ -203,7 +205,20 @@ export function OnsenFormPage() {
             <label>
               <input type="checkbox" checked={form.parking} onChange={(e) => set('parking', e.target.checked)} /> 駐車場
             </label>
+            <label>
+              <input type="checkbox" checked={form.has_lodging} onChange={(e) => set('has_lodging', e.target.checked)} /> 宿泊あり
+            </label>
           </div>
+          {form.has_lodging ? (
+            <label>
+              宿泊予約・案内ページのURL
+              <input
+                value={form.lodging_url ?? ''}
+                onChange={(e) => set('lodging_url', e.target.value)}
+                placeholder="https://..."
+              />
+            </label>
+          ) : null}
         </fieldset>
 
         <fieldset>

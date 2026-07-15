@@ -308,6 +308,7 @@ export default function OnsenDetailScreen() {
               <FeatureItem icon="fire" label="サウナ" on={onsen.features.sauna} />
               <FeatureItem icon="silverware-fork-knife" label="食事処" on={onsen.features.restaurant} />
               <FeatureItem icon="parking" label="駐車場" on={onsen.features.parking} />
+              <FeatureItem icon="bed" label="宿泊" on={onsen.hasLodging} />
             </View>
           </View>
 
@@ -329,6 +330,12 @@ export default function OnsenDetailScreen() {
               <Ionicons name="globe-outline" size={16} color={colors.accentStrong} />
               <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>参考サイトを開く</Text>
             </Pressable>
+            {onsen.hasLodging && onsen.lodgingUrl ? (
+              <Pressable style={styles.linkRow} onPress={() => Linking.openURL(onsen.lodgingUrl)}>
+                <Ionicons name="bed-outline" size={16} color={colors.accentStrong} />
+                <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>宿泊はこちら</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <Divider />
@@ -648,8 +655,8 @@ const styles = StyleSheet.create({
   },
   vDivider: { width: 1, marginHorizontal: 14 },
   sectionTitle: { fontSize: 11.5, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 12 },
-  featureGrid: { flexDirection: 'row', gap: 10 },
-  featureItem: { flex: 1, alignItems: 'center', paddingVertical: 12, borderWidth: 1 },
+  featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  featureItem: { flexBasis: '30%', flexGrow: 1, alignItems: 'center', paddingVertical: 12, borderWidth: 1 },
   linkRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   closedBanner: { paddingVertical: 10, alignItems: 'center' },
   closedBannerText: { color: '#fff', fontWeight: '800', fontSize: 13.5 },

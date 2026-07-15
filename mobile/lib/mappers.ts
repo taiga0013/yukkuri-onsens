@@ -35,6 +35,8 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
     },
     phone: row.phone ?? '',
     website: row.website ?? '',
+    hasLodging: row.has_lodging,
+    lodgingUrl: row.lodging_url ?? '',
     regularHoliday: row.regular_holiday ?? '',
     winterClosure: {
       start: row.winter_closure_start ?? '12-01',

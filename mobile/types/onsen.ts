@@ -45,6 +45,8 @@ export interface Onsen {
   capacity: OnsenCapacity;
   phone: string;
   website: string;
+  hasLodging: boolean;
+  lodgingUrl: string;
   regularHoliday: string;
   winterClosure: WinterClosure;
   isTemporarilyClosed: boolean;
