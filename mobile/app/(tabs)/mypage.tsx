@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SectionHeader } from '../../components/SectionHeader';
@@ -11,6 +11,7 @@ import { useFavorites } from '../../context/FavoritesContext';
 import { useOnsenData } from '../../context/OnsenDataContext';
 import { useRecentVisits } from '../../hooks/useRecentVisits';
 import { pickAndUploadAvatar } from '../../lib/avatarUpload';
+import { showAlert } from '../../lib/platformAlert';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 
 const AVATAR_SEEDS = ['avatar-a', 'avatar-b', 'avatar-c', 'avatar-d'];
@@ -88,7 +89,7 @@ export default function MyPageScreen() {
     const { url, error } = await pickAndUploadAvatar(session.user.id);
     setUploadingAvatar(false);
     if (error) {
-      Alert.alert('アイコンの変更に失敗しました', error);
+      showAlert('アイコンの変更に失敗しました', error);
       return;
     }
     if (url) await persist({ avatar_url: url });
@@ -97,6 +98,12 @@ export default function MyPageScreen() {
   const onAvatarPress = () => {
     if (isMock) {
       cyclePresetAvatar();
+      return;
+    }
+    // react-native-webはAlert.alertが空実装で選択メニューを出せないため、
+    // Webでは確認なしで直接ファイル選択（expo-image-pickerはWeb対応済み）に進む
+    if (Platform.OS === 'web') {
+      uploadFromLibrary();
       return;
     }
     Alert.alert('アイコンを変更', undefined, [
