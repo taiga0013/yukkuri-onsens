@@ -20,9 +20,20 @@ export function useRecentVisits(limit = 5) {
       .eq('user_id', session.user.id)
       .not('checked_out_at', 'is', null)
       .order('checked_out_at', { ascending: false })
-      .limit(limit)
+      .limit(limit * 4) // 同じ施設への複数回チェックインを除いてもlimit件数を確保できるよう多めに取得
       .then(({ data }) => {
-        if (data) setVisits((data as CheckinRow[]).map(mapCheckinToVisit));
+        if (data) {
+          const seenOnsenIds = new Set<string>();
+          const deduped: VisitHistoryItem[] = [];
+          for (const row of data as CheckinRow[]) {
+            const visit = mapCheckinToVisit(row);
+            if (seenOnsenIds.has(visit.onsenId)) continue;
+            seenOnsenIds.add(visit.onsenId);
+            deduped.push(visit);
+            if (deduped.length >= limit) break;
+          }
+          setVisits(deduped);
+        }
         setLoading(false);
       });
   }, [session, limit]);
