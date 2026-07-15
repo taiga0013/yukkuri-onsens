@@ -1,9 +1,10 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ActionSheet, type ActionSheetOption } from '../../components/ActionSheet';
 import { CongestionBadge } from '../../components/CongestionBadge';
 import { PhotoSlider } from '../../components/PhotoSlider';
 import { ProgressBar } from '../../components/ProgressBar';
@@ -14,6 +15,7 @@ import { useOnsenData } from '../../context/OnsenDataContext';
 import { useCheckin } from '../../hooks/useCheckin';
 import { useOnsenSuggestions } from '../../hooks/useOnsenSuggestions';
 import { useReviews } from '../../hooks/useReviews';
+import { showAlert } from '../../lib/platformAlert';
 import type { Review } from '../../types/onsen';
 import { getCongestionLevel } from '../../types/onsen';
 
@@ -39,17 +41,25 @@ export default function OnsenDetailScreen() {
   const { colors, congestion: semantic, radius, type } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { onsens, getCongestion, loadingOnsens } = useOnsenData();
-  const { isMock } = useAuth();
+  const { isMock, session } = useAuth();
 
   const onsen = onsens.find((o) => o.id === id);
-  const { reviews: fetchedReviews, submitReview: submitReviewRemote, reportReview: reportReviewRemote } = useReviews(id);
+  const {
+    reviews: fetchedReviews,
+    submitReview: submitReviewRemote,
+    reportReview: reportReviewRemote,
+    updateReview: updateReviewRemote,
+    deleteReview: deleteReviewRemote,
+  } = useReviews(id);
   const { isCheckedIn, loading: checkinLoading, checkIn, checkOut, isAvailable: checkinAvailable } = useCheckin(id);
   const { submitEditSuggestion, submitOwnerApplication, isAvailable: suggestionsAvailable } = useOnsenSuggestions(id);
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [composing, setComposing] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
   const [draftRating, setDraftRating] = useState<1 | 2 | 3 | 4 | 5>(5);
   const [draftText, setDraftText] = useState('');
+  const [menuReview, setMenuReview] = useState<Review | null>(null);
 
   const [editingInfo, setEditingInfo] = useState(false);
   const [editHours, setEditHours] = useState('');
@@ -100,14 +110,53 @@ export default function OnsenDetailScreen() {
     busy: semantic.busy,
   }[getCongestionLevel(congestionData.congestionRate)];
 
+  const MOCK_SELF_USER_ID = 'mock-user';
+  const isOwnReview = (review: Review) => review.userId === (isMock ? MOCK_SELF_USER_ID : session?.user.id);
+
+  const closeComposer = () => {
+    setComposing(false);
+    setEditingReviewId(null);
+    setDraftText('');
+    setDraftRating(5);
+  };
+
+  const startEditReview = (review: Review) => {
+    setEditingReviewId(review.id);
+    setDraftRating(review.rating);
+    setDraftText(review.comment);
+    setComposing(true);
+  };
+
+  const deleteReviewHandler = async (review: Review) => {
+    if (isMock) {
+      setLocalReviews((prev) => prev.filter((r) => r.id !== review.id));
+      return;
+    }
+    const { error } = await deleteReviewRemote(review.id);
+    if (error) showAlert('削除に失敗しました', error);
+  };
+
   const submitReview = async () => {
     if (!draftText.trim()) return;
 
-    if (isMock) {
+    if (editingReviewId) {
+      if (isMock) {
+        setLocalReviews((prev) =>
+          prev.map((r) => (r.id === editingReviewId ? { ...r, rating: draftRating, comment: draftText.trim() } : r)),
+        );
+      } else {
+        const { error } = await updateReviewRemote(editingReviewId, draftRating, draftText.trim());
+        if (error) {
+          showAlert('更新に失敗しました', error);
+          return;
+        }
+      }
+    } else if (isMock) {
       setLocalReviews((prev) => [
         {
           id: `local_${Date.now()}`,
           onsenId: onsen.id,
+          userId: MOCK_SELF_USER_ID,
           userName: '湯めぐりユーザー',
           userAvatar: 'https://picsum.photos/seed/avatar-a/100/100',
           rating: draftRating,
@@ -120,31 +169,27 @@ export default function OnsenDetailScreen() {
     } else {
       const { error } = await submitReviewRemote(draftRating, draftText.trim());
       if (error) {
-        Alert.alert('投稿に失敗しました', error);
+        showAlert('投稿に失敗しました', error);
         return;
       }
     }
-    setDraftText('');
-    setDraftRating(5);
-    setComposing(false);
+    closeComposer();
   };
 
-  const reportReview = (reviewId: string) => {
-    Alert.alert(
-      '通報カテゴリを選択',
-      undefined,
-      [
-        ...REPORT_CATEGORIES.map((c) => ({
-          text: c.label,
+  const menuOptions: ActionSheetOption[] = menuReview
+    ? isOwnReview(menuReview)
+      ? [
+          { label: '編集する', onPress: () => startEditReview(menuReview) },
+          { label: '削除する', destructive: true, onPress: () => deleteReviewHandler(menuReview) },
+        ]
+      : REPORT_CATEGORIES.map((c) => ({
+          label: c.label,
           onPress: async () => {
-            if (!isMock) await reportReviewRemote(reviewId, c.value);
-            Alert.alert('通報を受け付けました');
+            if (!isMock) await reportReviewRemote(menuReview.id, c.value);
+            showAlert('通報を受け付けました');
           },
-        })),
-        { text: 'キャンセル', style: 'cancel' as const },
-      ],
-    );
-  };
+        }))
+    : [];
 
   const submitInfoCorrection = async () => {
     setSubmittingEdit(true);
@@ -157,10 +202,10 @@ export default function OnsenDetailScreen() {
     const { error } = await submitEditSuggestion(changes, editNote);
     setSubmittingEdit(false);
     if (error) {
-      Alert.alert('送信に失敗しました', error);
+      showAlert('送信に失敗しました', error);
       return;
     }
-    Alert.alert('ご協力ありがとうございます', '修正提案を受け付けました。管理者の確認後に反映されます。');
+    showAlert('ご協力ありがとうございます', '修正提案を受け付けました。管理者の確認後に反映されます。');
     setEditHours('');
     setEditPriceAdult('');
     setEditPriceChild('');
@@ -174,10 +219,10 @@ export default function OnsenDetailScreen() {
     const { error } = await submitOwnerApplication(ownerMessage);
     setSubmittingOwner(false);
     if (error) {
-      Alert.alert('送信に失敗しました', error);
+      showAlert('送信に失敗しました', error);
       return;
     }
-    Alert.alert('申請を受け付けました', '管理者の承認をお待ちください。');
+    showAlert('申請を受け付けました', '管理者の承認をお待ちください。');
     setOwnerMessage('');
     setApplyingOwner(false);
   };
@@ -233,7 +278,7 @@ export default function OnsenDetailScreen() {
                   disabled={checkinLoading}
                   onPress={async () => {
                     const { error } = isCheckedIn ? await checkOut() : await checkIn();
-                    if (error) Alert.alert('エラー', error);
+                    if (error) showAlert('エラー', error);
                   }}
                   style={[
                     styles.checkinBtn,
@@ -442,7 +487,7 @@ export default function OnsenDetailScreen() {
           <View style={{ gap: 12 }}>
             <View style={styles.rowBetween}>
               <Text style={[styles.sectionTitle, { color: colors.inkFaint, marginBottom: 0 }]}>口コミ（{allReviews.length}件）</Text>
-              <Pressable onPress={() => setComposing((v) => !v)}>
+              <Pressable onPress={() => (composing ? closeComposer() : setComposing(true))}>
                 <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: '700' }}>
                   {composing ? '閉じる' : '口コミを投稿する'}
                 </Text>
@@ -451,6 +496,9 @@ export default function OnsenDetailScreen() {
 
             {composing ? (
               <View style={[styles.composer, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+                {editingReviewId ? (
+                  <Text style={{ color: colors.inkFaint, fontSize: 12 }}>レビューを編集しています</Text>
+                ) : null}
                 <View style={{ flexDirection: 'row', gap: 6 }}>
                   {[1, 2, 3, 4, 5].map((n) => (
                     <Pressable key={n} onPress={() => setDraftRating(n as 1 | 2 | 3 | 4 | 5)}>
@@ -471,7 +519,9 @@ export default function OnsenDetailScreen() {
                   style={[styles.composerInput, { color: colors.ink, borderColor: colors.rule }]}
                 />
                 <Pressable onPress={submitReview} style={[styles.submitBtn, { backgroundColor: colors.accent }]}>
-                  <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>投稿する</Text>
+                  <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>
+                    {editingReviewId ? '更新する' : '投稿する'}
+                  </Text>
                 </Pressable>
               </View>
             ) : null}
@@ -498,12 +548,19 @@ export default function OnsenDetailScreen() {
 
             <View style={{ gap: 12 }}>
               {sortedReviews.map((r) => (
-                <ReviewCard key={r.id} review={r} onReport={() => reportReview(r.id)} />
+                <ReviewCard key={r.id} review={r} isOwn={isOwnReview(r)} onMenu={() => setMenuReview(r)} />
               ))}
             </View>
           </View>
         </View>
       </ScrollView>
+
+      <ActionSheet
+        visible={!!menuReview}
+        title={menuReview && !isOwnReview(menuReview) ? '通報カテゴリを選択' : undefined}
+        options={menuOptions}
+        onClose={() => setMenuReview(null)}
+      />
     </View>
   );
 }
@@ -531,7 +588,7 @@ function FeatureItem({ icon, label, on }: { icon: string; label: string; on: boo
   );
 }
 
-function ReviewCard({ review, onReport }: { review: Review; onReport: () => void }) {
+function ReviewCard({ review, isOwn, onMenu }: { review: Review; isOwn: boolean; onMenu: () => void }) {
   const { colors, radius } = useTheme();
   return (
     <View style={[styles.reviewCard, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
@@ -539,7 +596,10 @@ function ReviewCard({ review, onReport }: { review: Review; onReport: () => void
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={[styles.avatarSmall, { backgroundColor: colors.bgInset }]} />
           <View>
-            <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '700' }}>{review.userName}</Text>
+            <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '700' }}>
+              {review.userName}
+              {isOwn ? <Text style={{ color: colors.accentStrong, fontSize: 11 }}> （あなた）</Text> : null}
+            </Text>
             <View style={{ flexDirection: 'row', gap: 1, marginTop: 2 }}>
               {[1, 2, 3, 4, 5].map((n) => (
                 <Ionicons key={n} name={n <= review.rating ? 'star' : 'star-outline'} size={11} color={colors.accentStrong} />
@@ -547,7 +607,7 @@ function ReviewCard({ review, onReport }: { review: Review; onReport: () => void
             </View>
           </View>
         </View>
-        <Pressable onPress={onReport} hitSlop={10}>
+        <Pressable onPress={onMenu} hitSlop={10}>
           <Ionicons name="ellipsis-horizontal" size={16} color={colors.inkFaint} />
         </Pressable>
       </View>

@@ -63,6 +63,7 @@ export function mapReviewRow(row: PublicReviewRow, userName: string, userAvatar:
   return {
     id: row.id,
     onsenId: row.onsen_id,
+    userId: row.user_id,
     userName,
     userAvatar,
     rating: row.rating,

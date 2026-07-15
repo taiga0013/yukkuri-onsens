@@ -84,6 +84,7 @@ export const congestionLabel: Record<CongestionLevel, string> = {
 export interface Review {
   id: string;
   onsenId: string;
+  userId: string;
   userName: string;
   userAvatar: string;
   rating: 1 | 2 | 3 | 4 | 5;

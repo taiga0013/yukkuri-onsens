@@ -297,6 +297,7 @@ export const reviews: Review[] = [
   {
     id: 'rv_001',
     onsenId: 'tsukioka_hoshinoya_001',
+    userId: 'mock-other-user-1',
     userName: 'ゆのすけ',
     userAvatar: 'https://picsum.photos/seed/avatar1/100/100',
     rating: 5,
@@ -307,6 +308,7 @@ export const reviews: Review[] = [
   {
     id: 'rv_002',
     onsenId: 'tsukioka_hoshinoya_001',
+    userId: 'mock-other-user-2',
     userName: 'にいがた温泉部',
     userAvatar: 'https://picsum.photos/seed/avatar2/100/100',
     rating: 4,
@@ -317,6 +319,7 @@ export const reviews: Review[] = [
   {
     id: 'rv_003',
     onsenId: 'yuzawa_takahan_007',
+    userId: 'mock-other-user-3',
     userName: 'スキーヤーA',
     userAvatar: 'https://picsum.photos/seed/avatar3/100/100',
     rating: 5,

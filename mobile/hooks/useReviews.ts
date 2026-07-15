@@ -66,5 +66,29 @@ export function useReviews(onsenId: string) {
     [session],
   );
 
-  return { reviews, loading, submitReview, reportReview, refetch: fetchReviews };
+  const updateReview = useCallback(
+    async (reviewId: string, rating: 1 | 2 | 3 | 4 | 5, comment: string) => {
+      if (!isSupabaseConfigured || !supabase || !session) return { error: 'not_available' as const };
+      const { error } = await supabase
+        .from('reviews')
+        .update({ rating, comment })
+        .eq('id', reviewId)
+        .eq('user_id', session.user.id);
+      if (!error) await fetchReviews();
+      return { error: error?.message ?? null };
+    },
+    [session, fetchReviews],
+  );
+
+  const deleteReview = useCallback(
+    async (reviewId: string) => {
+      if (!isSupabaseConfigured || !supabase || !session) return { error: 'not_available' as const };
+      const { error } = await supabase.from('reviews').delete().eq('id', reviewId).eq('user_id', session.user.id);
+      if (!error) await fetchReviews();
+      return { error: error?.message ?? null };
+    },
+    [session, fetchReviews],
+  );
+
+  return { reviews, loading, submitReview, reportReview, updateReview, deleteReview, refetch: fetchReviews };
 }
