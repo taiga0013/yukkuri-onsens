@@ -53,6 +53,15 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
+
+        <View>
+          <SectionHeader title="すべての温泉地" subtitle={`新潟県内 ${onsens.length}件`} />
+          <View style={{ gap: spacing.md }}>
+            {onsens.map((onsen) => (
+              <OnsenCard key={onsen.id} onsen={onsen} congestion={getCongestion(onsen.id)} />
+            ))}
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
