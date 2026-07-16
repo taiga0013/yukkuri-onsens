@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { LodgingPlansEditor } from '../components/LodgingPlansEditor';
 import { supabase } from '../lib/supabase';
 import { uploadOnsenPhoto } from '../lib/photoUpload';
 import type { OnsenFormValues, OnsenRow } from '../types/database';
@@ -185,7 +186,7 @@ export function OnsenFormPage() {
             </label>
           </div>
           <label>
-            運営時間
+            営業時間（日帰り入浴）
             <input value={form.hours ?? ''} onChange={(e) => set('hours', e.target.value)} placeholder="10:00〜21:00" />
           </label>
         </fieldset>
@@ -222,14 +223,14 @@ export function OnsenFormPage() {
         </fieldset>
 
         <fieldset>
-          <legend>料金・定員</legend>
+          <legend>日帰り入浴料金・定員</legend>
           <div className="form-row">
             <label>
-              大人料金（円）
+              日帰り入浴 大人料金（円）
               <input type="number" value={form.price_adult ?? 0} onChange={(e) => set('price_adult', Number(e.target.value))} />
             </label>
             <label>
-              子供料金（円）
+              日帰り入浴 子供料金（円）
               <input type="number" value={form.price_child ?? 0} onChange={(e) => set('price_child', Number(e.target.value))} />
             </label>
           </div>
@@ -375,6 +376,12 @@ export function OnsenFormPage() {
           </button>
         </div>
       </form>
+
+      {!isNew && form.has_lodging ? (
+        <div className="onsen-form" style={{ marginTop: 20 }}>
+          <LodgingPlansEditor onsenId={id!} />
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 
+import { LodgingPlansEditor } from '../components/LodgingPlansEditor';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import type { OnsenRow } from '../types/database';
@@ -116,8 +117,8 @@ export function OwnerOnsensPage() {
         <h2>自分の施設</h2>
       </div>
       <p className="muted" style={{ marginBottom: 16 }}>
-        料金・営業時間・休業情報のみ編集できます。その他の情報（説明・写真・設備など）を変更したい場合は、
-        アプリの温泉地詳細画面から「情報を修正する」で管理者に提案してください。
+        日帰り入浴の料金・営業時間・休業情報を編集できます。宿泊ありの施設は宿泊プランの追加・編集も可能です。
+        その他の情報（説明・写真・設備など）を変更したい場合は、アプリの温泉地詳細画面から「情報を修正する」で管理者に提案してください。
       </p>
 
       {error ? <p className="error-text">{error}</p> : null}
@@ -140,13 +141,13 @@ export function OwnerOnsensPage() {
                 <div className="onsen-form" style={{ maxWidth: '100%', marginTop: 10 }}>
                   <div className="form-row">
                     <label>
-                      運営時間
+                      営業時間（日帰り入浴）
                       <input value={edit.hours} onChange={(e) => setEdit({ ...edit, hours: e.target.value })} />
                     </label>
                   </div>
                   <div className="form-row">
                     <label>
-                      大人料金（円）
+                      日帰り入浴 大人料金（円）
                       <input
                         type="number"
                         value={edit.price_adult}
@@ -154,7 +155,7 @@ export function OwnerOnsensPage() {
                       />
                     </label>
                     <label>
-                      子供料金（円）
+                      日帰り入浴 子供料金（円）
                       <input
                         type="number"
                         value={edit.price_child}
@@ -218,11 +219,13 @@ export function OwnerOnsensPage() {
                       キャンセル
                     </button>
                   </div>
+
+                  {o.has_lodging ? <LodgingPlansEditor onsenId={o.id} /> : null}
                 </div>
               ) : (
                 <>
                   <p className="review-comment">
-                    運営時間: {o.hours ?? '未設定'} ／ 大人 {o.price_adult ?? 0}円・子供 {o.price_child ?? 0}円 ／ 定休日:{' '}
+                    日帰り入浴 営業時間: {o.hours ?? '未設定'} ／ 大人 {o.price_adult ?? 0}円・子供 {o.price_child ?? 0}円 ／ 定休日:{' '}
                     {o.regular_holiday ?? '未設定'}
                   </p>
                   <div className="review-card-footer">

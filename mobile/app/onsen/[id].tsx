@@ -1,6 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,8 +16,11 @@ import { useOnsenData } from '../../context/OnsenDataContext';
 import { useCheckin } from '../../hooks/useCheckin';
 import { useOnsenSuggestions } from '../../hooks/useOnsenSuggestions';
 import { useReviews } from '../../hooks/useReviews';
+import { mapLodgingPlanRow } from '../../lib/mappers';
 import { showAlert } from '../../lib/platformAlert';
-import type { Review } from '../../types/onsen';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import type { LodgingPlanRow } from '../../types/database';
+import type { LodgingPlan, Review } from '../../types/onsen';
 import { getCongestionLevel } from '../../types/onsen';
 
 type SortMode = 'high' | 'low' | 'newest' | 'oldest';
@@ -72,6 +76,25 @@ export default function OnsenDetailScreen() {
   const [applyingOwner, setApplyingOwner] = useState(false);
   const [ownerMessage, setOwnerMessage] = useState('');
   const [submittingOwner, setSubmittingOwner] = useState(false);
+
+  const [lodgingPlans, setLodgingPlans] = useState<LodgingPlan[]>([]);
+
+  useEffect(() => {
+    if (!isSupabaseConfigured || !supabase || !onsen?.hasLodging) {
+      setLodgingPlans([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase.from('lodging_plans').select('*').eq('onsen_id', onsen.id);
+      if (!cancelled && !error && data) {
+        setLodgingPlans((data as LodgingPlanRow[]).map(mapLodgingPlanRow));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [onsen?.id, onsen?.hasLodging]);
 
   const congestionData = useMemo(() => (onsen ? getCongestion(onsen.id) : null), [onsen, getCongestion]);
   const allReviews = useMemo(
@@ -255,7 +278,7 @@ export default function OnsenDetailScreen() {
               {onsen.city}
               {onsen.area}
             </Text>
-            <Text style={{ color: colors.inkDim, fontSize: 13 }}>運営時間 {onsen.hours}</Text>
+            <Text style={{ color: colors.inkDim, fontSize: 13 }}>営業時間（日帰り入浴） {onsen.hours}</Text>
 
             <View style={{ marginTop: 8, gap: 8 }}>
               <View style={styles.rowBetween}>
@@ -318,7 +341,7 @@ export default function OnsenDetailScreen() {
           <View style={{ gap: 10 }}>
             <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>料金・アクセス</Text>
             <Text style={{ color: colors.ink, fontSize: 14 }}>
-              入浴料金　大人 {onsen.price.adult}円 / 子供 {onsen.price.child}円
+              日帰り入浴料金　大人 {onsen.price.adult}円 / 子供 {onsen.price.child}円
             </Text>
             <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
             <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>{onsen.address}</Text>
@@ -337,6 +360,18 @@ export default function OnsenDetailScreen() {
               </Pressable>
             ) : null}
           </View>
+
+          {onsen.hasLodging && lodgingPlans.length > 0 ? (
+            <>
+              <Divider />
+              <View style={{ gap: 14 }}>
+                <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>宿泊プラン</Text>
+                {lodgingPlans.map((plan) => (
+                  <LodgingPlanCard key={plan.id} plan={plan} />
+                ))}
+              </View>
+            </>
+          ) : null}
 
           <Divider />
 
@@ -585,6 +620,40 @@ function GenderStat({ label, count, rate, color }: { label: string; count: numbe
   );
 }
 
+const PEOPLE_COUNT_LABELS = ['1名利用時', '2名利用時', '3名利用時', '4名以上利用時'];
+
+function LodgingPlanCard({ plan }: { plan: LodgingPlan }) {
+  const { colors, radius } = useTheme();
+  return (
+    <View style={[styles.lodgingPlanCard, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
+      {plan.photos.length > 0 ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ padding: 10 }} contentContainerStyle={{ gap: 8 }}>
+          {plan.photos.map((uri, i) => (
+            <Image key={`${uri}-${i}`} source={{ uri }} style={[styles.lodgingPhotoThumb, { borderRadius: radius.md }]} contentFit="cover" />
+          ))}
+        </ScrollView>
+      ) : null}
+      <View style={{ padding: 14, paddingTop: plan.photos.length > 0 ? 0 : 14, gap: 8 }}>
+        <Text style={{ color: colors.ink, fontSize: 14.5, fontWeight: '700' }}>{plan.name}</Text>
+        {plan.mealInfo ? <Text style={{ color: colors.inkDim, fontSize: 13 }}>食事：{plan.mealInfo}</Text> : null}
+        {plan.paymentMethod ? (
+          <Text style={{ color: colors.inkDim, fontSize: 13 }}>決済方法：{plan.paymentMethod}</Text>
+        ) : null}
+        <View style={{ gap: 4, marginTop: 4 }}>
+          {plan.pricePerPerson.map((price, i) =>
+            price != null ? (
+              <View key={i} style={styles.rowBetween}>
+                <Text style={{ color: colors.inkFaint, fontSize: 12.5 }}>{PEOPLE_COUNT_LABELS[i]}</Text>
+                <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '700' }}>{price}円 / 人</Text>
+              </View>
+            ) : null,
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
 function FeatureItem({ icon, label, on }: { icon: string; label: string; on: boolean }) {
   const { colors, radius } = useTheme();
   return (
@@ -677,5 +746,7 @@ const styles = StyleSheet.create({
   submitBtn: { alignSelf: 'flex-end', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10 },
   sortChip: { paddingHorizontal: 12, paddingVertical: 7 },
   reviewCard: { padding: 14, borderWidth: 1 },
+  lodgingPlanCard: { borderWidth: 1, overflow: 'hidden' },
+  lodgingPhotoThumb: { width: 130, height: 100 },
   avatarSmall: { width: 28, height: 28, borderRadius: 14 },
 });

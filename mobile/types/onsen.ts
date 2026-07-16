@@ -53,6 +53,15 @@ export interface Onsen {
   photos: string[];
 }
 
+export interface LodgingPlan {
+  id: string;
+  name: string;
+  mealInfo: string;
+  paymentMethod: string;
+  pricePerPerson: (number | null)[]; // [1名, 2名, 3名, 4名以上]
+  photos: string[];
+}
+
 export interface GenderCongestion {
   usersCount: number;
   congestionRate: number;

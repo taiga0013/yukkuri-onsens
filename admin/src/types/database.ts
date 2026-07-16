@@ -53,6 +53,21 @@ export interface OnsenRow {
 
 export type OnsenFormValues = Omit<OnsenRow, 'id' | 'created_at' | 'updated_at'>;
 
+export interface LodgingPlanRow {
+  id: string;
+  onsen_id: string;
+  name: string;
+  meal_info: string | null;
+  payment_method: string | null;
+  price_per_person_1: number | null;
+  price_per_person_2: number | null;
+  price_per_person_3: number | null;
+  price_per_person_4: number | null;
+  photos: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ReviewRow {
   id: string;
   onsen_id: string;

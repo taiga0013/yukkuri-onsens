@@ -42,3 +42,22 @@ export async function uploadOnsenPhoto(file: File): Promise<{ url?: string; erro
     return { error: e instanceof Error ? e.message : '画像のアップロードに失敗しました' };
   }
 }
+
+// 宿泊プラン写真用。パスを {onsenId}/{uuid}.jpg にして、ストレージRLS側で
+// storage.foldername(name) からonsen_idを取り出しis_owner_of()判定できるようにする
+export async function uploadLodgingPlanPhoto(onsenId: string, file: File): Promise<{ url?: string; error?: string }> {
+  try {
+    const blob = await compressImage(file);
+    const path = `${onsenId}/${crypto.randomUUID()}.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('lodging-plan-photos')
+      .upload(path, blob, { contentType: 'image/jpeg' });
+    if (uploadError) return { error: uploadError.message };
+
+    const { data } = supabase.storage.from('lodging-plan-photos').getPublicUrl(path);
+    return { url: data.publicUrl };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : '画像のアップロードに失敗しました' };
+  }
+}

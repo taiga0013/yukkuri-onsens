@@ -1,5 +1,5 @@
-import type { CheckinRow, OnsenLiveStatusRow, OnsenRow, PublicReviewRow } from '../types/database';
-import type { Congestion, Onsen, Review } from '../types/onsen';
+import type { CheckinRow, LodgingPlanRow, OnsenLiveStatusRow, OnsenRow, PublicReviewRow } from '../types/database';
+import type { Congestion, LodgingPlan, Onsen, Review } from '../types/onsen';
 
 export function mapOnsenRow(row: OnsenRow): Onsen {
   return {
@@ -45,6 +45,17 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
     },
     isTemporarilyClosed: row.is_temporarily_closed,
     photos: row.photos.length > 0 ? row.photos : [`https://picsum.photos/seed/${row.id}/900/650`],
+  };
+}
+
+export function mapLodgingPlanRow(row: LodgingPlanRow): LodgingPlan {
+  return {
+    id: row.id,
+    name: row.name,
+    mealInfo: row.meal_info ?? '',
+    paymentMethod: row.payment_method ?? '',
+    pricePerPerson: [row.price_per_person_1, row.price_per_person_2, row.price_per_person_3, row.price_per_person_4],
+    photos: row.photos,
   };
 }
 
