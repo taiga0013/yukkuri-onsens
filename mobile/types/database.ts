@@ -35,11 +35,13 @@ export interface OnsenRow {
   price_adult: number | null;
   price_child: number | null;
   price_child_condition: string | null;
+  payment_method: string | null;
   capacity_total: number;
   capacity_male: number;
   capacity_female: number;
   phone: string | null;
   website: string | null;
+  access_info: string | null;
   regular_holiday: string | null;
   winter_closure_start: string | null;
   winter_closure_end: string | null;

@@ -29,11 +29,13 @@ const emptyForm: OnsenFormValues = {
   price_adult: 0,
   price_child: 0,
   price_child_condition: '',
+  payment_method: '',
   capacity_total: 0,
   capacity_male: 0,
   capacity_female: 0,
   phone: '',
   website: '',
+  access_info: '',
   regular_holiday: '',
   winter_closure_start: '12-01',
   winter_closure_end: '03-31',
@@ -242,6 +244,14 @@ export function OnsenFormPage() {
               placeholder="小学生（6〜12歳）。未就学児は無料"
             />
           </label>
+          <label>
+            日帰り入浴 決済方法
+            <input
+              value={form.payment_method ?? ''}
+              onChange={(e) => set('payment_method', e.target.value)}
+              placeholder="現金・クレジットカード可"
+            />
+          </label>
           <div className="form-row">
             <label>
               定員（合計）
@@ -285,6 +295,15 @@ export function OnsenFormPage() {
               <input value={form.website ?? ''} onChange={(e) => set('website', e.target.value)} />
             </label>
           </div>
+          <label>
+            アクセス（行き方）
+            <textarea
+              value={form.access_info ?? ''}
+              onChange={(e) => set('access_info', e.target.value)}
+              rows={2}
+              placeholder="磐越自動車道 安田ICから車で10分"
+            />
+          </label>
         </fieldset>
 
         <fieldset>

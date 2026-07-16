@@ -11,6 +11,7 @@ export interface OnsenPrice {
   adult: number;
   child: number;
   childCondition: string;
+  paymentMethod: string;
 }
 
 export interface OnsenCapacity {
@@ -45,6 +46,7 @@ export interface Onsen {
   capacity: OnsenCapacity;
   phone: string;
   website: string;
+  accessInfo: string;
   hasLodging: boolean;
   lodgingUrl: string;
   regularHoliday: string;

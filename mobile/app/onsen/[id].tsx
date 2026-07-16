@@ -344,7 +344,25 @@ export default function OnsenDetailScreen() {
               日帰り入浴料金　大人 {onsen.price.adult}円 / 子供 {onsen.price.child}円
             </Text>
             <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
+            {onsen.price.paymentMethod ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>決済方法：{onsen.price.paymentMethod}</Text>
+            ) : null}
             <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>{onsen.address}</Text>
+            <Pressable
+              style={styles.linkRow}
+              onPress={() =>
+                Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${onsen.latitude},${onsen.longitude}`)
+              }
+            >
+              <Ionicons name="map-outline" size={16} color={colors.accentStrong} />
+              <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>地図で見る</Text>
+            </Pressable>
+            {onsen.accessInfo ? (
+              <View style={[styles.linkRow, { alignItems: 'flex-start' }]}>
+                <Ionicons name="navigate-outline" size={16} color={colors.inkFaint} style={{ marginTop: 1 }} />
+                <Text style={{ color: colors.inkDim, fontSize: 13, flex: 1, lineHeight: 19 }}>{onsen.accessInfo}</Text>
+              </View>
+            ) : null}
             <Pressable style={styles.linkRow} onPress={() => Linking.openURL(`tel:${onsen.phone}`)}>
               <Ionicons name="call-outline" size={16} color={colors.accentStrong} />
               <Text style={{ color: colors.accentStrong, fontSize: 13.5 }}>{onsen.phone}</Text>

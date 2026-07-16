@@ -27,6 +27,7 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
       adult: row.price_adult ?? 0,
       child: row.price_child ?? 0,
       childCondition: row.price_child_condition ?? '',
+      paymentMethod: row.payment_method ?? '',
     },
     capacity: {
       total: row.capacity_total,
@@ -35,6 +36,7 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
     },
     phone: row.phone ?? '',
     website: row.website ?? '',
+    accessInfo: row.access_info ?? '',
     hasLodging: row.has_lodging,
     lodgingUrl: row.lodging_url ?? '',
     regularHoliday: row.regular_holiday ?? '',

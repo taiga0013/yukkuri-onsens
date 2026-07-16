@@ -10,6 +10,7 @@ interface EditState {
   price_adult: string;
   price_child: string;
   price_child_condition: string;
+  payment_method: string;
   regular_holiday: string;
   winter_closure_start: string;
   winter_closure_end: string;
@@ -23,6 +24,7 @@ function toEditState(o: OnsenRow): EditState {
     price_adult: String(o.price_adult ?? 0),
     price_child: String(o.price_child ?? 0),
     price_child_condition: o.price_child_condition ?? '',
+    payment_method: o.payment_method ?? '',
     regular_holiday: o.regular_holiday ?? '',
     winter_closure_start: o.winter_closure_start ?? '12-01',
     winter_closure_end: o.winter_closure_end ?? '03-31',
@@ -96,6 +98,7 @@ export function OwnerOnsensPage() {
       p_price_adult: Number(edit.price_adult),
       p_price_child: Number(edit.price_child),
       p_price_child_condition: edit.price_child_condition,
+      p_payment_method: edit.payment_method,
       p_regular_holiday: edit.regular_holiday,
       p_winter_closure_start: edit.winter_closure_start,
       p_winter_closure_end: edit.winter_closure_end,
@@ -168,6 +171,14 @@ export function OwnerOnsensPage() {
                     <input
                       value={edit.price_child_condition}
                       onChange={(e) => setEdit({ ...edit, price_child_condition: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    日帰り入浴 決済方法
+                    <input
+                      value={edit.payment_method}
+                      onChange={(e) => setEdit({ ...edit, payment_method: e.target.value })}
+                      placeholder="現金・クレジットカード可"
                     />
                   </label>
                   <label>
