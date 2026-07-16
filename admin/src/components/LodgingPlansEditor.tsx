@@ -115,7 +115,7 @@ export function LodgingPlansEditor({ onsenId }: { onsenId: string }) {
 
   return (
     <fieldset>
-      <legend>宿泊プラン</legend>
+      <legend>おすすめの宿泊プラン</legend>
       {error ? <p className="error-text">{error}</p> : null}
       {loading ? (
         <p className="muted">読み込み中…</p>

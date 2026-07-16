@@ -383,7 +383,7 @@ export default function OnsenDetailScreen() {
             <>
               <Divider />
               <View style={{ gap: 14 }}>
-                <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>宿泊プラン</Text>
+                <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>おすすめの宿泊プラン</Text>
                 {lodgingPlans.map((plan) => (
                   <LodgingPlanCard key={plan.id} plan={plan} />
                 ))}
