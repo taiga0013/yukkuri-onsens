@@ -387,6 +387,9 @@ export default function OnsenDetailScreen() {
                 {lodgingPlans.map((plan) => (
                   <LodgingPlanCard key={plan.id} plan={plan} />
                 ))}
+                <Text style={{ color: colors.inkDim, fontSize: 12 }}>
+                  その他の宿泊プランは参考サイトまたは宿泊はこちらをご覧ください。
+                </Text>
               </View>
             </>
           ) : null}
