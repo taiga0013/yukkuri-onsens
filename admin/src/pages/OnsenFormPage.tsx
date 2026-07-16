@@ -17,6 +17,7 @@ const emptyForm: OnsenFormValues = {
   latitude: 0,
   longitude: 0,
   hours: '',
+  regular_hours: '',
   rotenburo: false,
   sauna: false,
   restaurant: false,
@@ -190,6 +191,14 @@ export function OnsenFormPage() {
           <label>
             営業時間（日帰り入浴）
             <input value={form.hours ?? ''} onChange={(e) => set('hours', e.target.value)} placeholder="10:00〜21:00" />
+          </label>
+          <label>
+            通常の営業時間
+            <input
+              value={form.regular_hours ?? ''}
+              onChange={(e) => set('regular_hours', e.target.value)}
+              placeholder="24時間（フロント対応 8:00〜20:00）"
+            />
           </label>
         </fieldset>
 

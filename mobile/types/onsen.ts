@@ -38,6 +38,7 @@ export interface Onsen {
   latitude: number;
   longitude: number;
   hours: string;
+  regularHours: string;
   features: OnsenFeatures;
   description: string;
   components: string;
@@ -61,6 +62,8 @@ export interface LodgingPlan {
   mealInfo: string;
   paymentMethod: string;
   pricePerPerson: (string | null)[]; // [1名, 2名, 3名, 4名以上]
+  checkInTime: string;
+  checkOutTime: string;
   photos: string[];
 }
 

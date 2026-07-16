@@ -66,6 +66,8 @@ export function LodgingPlansEditor({ onsenId }: { onsenId: string }) {
         price_per_person_2: plan.price_per_person_2,
         price_per_person_3: plan.price_per_person_3,
         price_per_person_4: plan.price_per_person_4,
+        check_in_time: plan.check_in_time,
+        check_out_time: plan.check_out_time,
         photos: plan.photos,
       })
       .eq('id', plan.id);
@@ -156,6 +158,24 @@ export function LodgingPlansEditor({ onsenId }: { onsenId: string }) {
                     />
                   </label>
                 ))}
+              </div>
+              <div className="form-row">
+                <label>
+                  チェックイン
+                  <input
+                    value={plan.check_in_time ?? ''}
+                    onChange={(e) => updatePlan(plan.id, 'check_in_time', e.target.value || null)}
+                    placeholder="15:00〜"
+                  />
+                </label>
+                <label>
+                  チェックアウト
+                  <input
+                    value={plan.check_out_time ?? ''}
+                    onChange={(e) => updatePlan(plan.id, 'check_out_time', e.target.value || null)}
+                    placeholder="〜10:00"
+                  />
+                </label>
               </div>
               <label>
                 イメージ

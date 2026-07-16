@@ -279,6 +279,9 @@ export default function OnsenDetailScreen() {
               {onsen.area}
             </Text>
             <Text style={{ color: colors.inkDim, fontSize: 13 }}>営業時間（日帰り入浴） {onsen.hours}</Text>
+            {onsen.regularHours ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>通常の営業時間 {onsen.regularHours}</Text>
+            ) : null}
 
             <View style={{ marginTop: 8, gap: 8 }}>
               <View style={styles.rowBetween}>
@@ -659,6 +662,11 @@ function LodgingPlanCard({ plan }: { plan: LodgingPlan }) {
         {plan.mealInfo ? <Text style={{ color: colors.inkDim, fontSize: 13 }}>食事：{plan.mealInfo}</Text> : null}
         {plan.paymentMethod ? (
           <Text style={{ color: colors.inkDim, fontSize: 13 }}>決済方法：{plan.paymentMethod}</Text>
+        ) : null}
+        {plan.checkInTime || plan.checkOutTime ? (
+          <Text style={{ color: colors.inkDim, fontSize: 13 }}>
+            チェックイン：{plan.checkInTime || '未設定'} ／ チェックアウト：{plan.checkOutTime || '未設定'}
+          </Text>
         ) : null}
         <View style={{ gap: 4, marginTop: 4 }}>
           {plan.pricePerPerson.map((price, i) =>

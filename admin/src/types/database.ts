@@ -23,6 +23,7 @@ export interface OnsenRow {
   latitude: number;
   longitude: number;
   hours: string | null;
+  regular_hours: string | null;
   rotenburo: boolean;
   sauna: boolean;
   restaurant: boolean;
@@ -65,6 +66,8 @@ export interface LodgingPlanRow {
   price_per_person_2: string | null;
   price_per_person_3: string | null;
   price_per_person_4: string | null;
+  check_in_time: string | null;
+  check_out_time: string | null;
   photos: string[];
   created_at: string;
   updated_at: string;

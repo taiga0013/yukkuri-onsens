@@ -14,6 +14,7 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
     latitude: row.latitude,
     longitude: row.longitude,
     hours: row.hours ?? '',
+    regularHours: row.regular_hours ?? '',
     features: {
       rotenburo: row.rotenburo,
       sauna: row.sauna,
@@ -57,6 +58,8 @@ export function mapLodgingPlanRow(row: LodgingPlanRow): LodgingPlan {
     mealInfo: row.meal_info ?? '',
     paymentMethod: row.payment_method ?? '',
     pricePerPerson: [row.price_per_person_1, row.price_per_person_2, row.price_per_person_3, row.price_per_person_4],
+    checkInTime: row.check_in_time ?? '',
+    checkOutTime: row.check_out_time ?? '',
     photos: row.photos,
   };
 }
