@@ -158,7 +158,7 @@ export function LodgingPlansEditor({ onsenId }: { onsenId: string }) {
                 ))}
               </div>
               <label>
-                写真
+                イメージ
                 <div className="photo-grid">
                   {plan.photos.map((url) => (
                     <div key={url} className="photo-thumb">
