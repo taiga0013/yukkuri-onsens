@@ -58,10 +58,10 @@ export interface LodgingPlanRow {
   name: string;
   meal_info: string | null;
   payment_method: string | null;
-  price_per_person_1: number | null;
-  price_per_person_2: number | null;
-  price_per_person_3: number | null;
-  price_per_person_4: number | null;
+  price_per_person_1: string | null;
+  price_per_person_2: string | null;
+  price_per_person_3: string | null;
+  price_per_person_4: string | null;
   photos: string[];
   created_at: string;
   updated_at: string;

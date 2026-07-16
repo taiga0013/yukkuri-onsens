@@ -150,11 +150,9 @@ export function LodgingPlansEditor({ onsenId }: { onsenId: string }) {
                   <label key={f.key}>
                     {f.label}
                     <input
-                      type="number"
                       value={plan[f.key] ?? ''}
-                      onChange={(e) =>
-                        updatePlan(plan.id, f.key, e.target.value === '' ? null : Number(e.target.value))
-                      }
+                      onChange={(e) => updatePlan(plan.id, f.key, e.target.value === '' ? null : e.target.value)}
+                      placeholder="8,000〜10,000"
                     />
                   </label>
                 ))}

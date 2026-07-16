@@ -662,7 +662,7 @@ function LodgingPlanCard({ plan }: { plan: LodgingPlan }) {
         ) : null}
         <View style={{ gap: 4, marginTop: 4 }}>
           {plan.pricePerPerson.map((price, i) =>
-            price != null ? (
+            price ? (
               <View key={i} style={styles.rowBetween}>
                 <Text style={{ color: colors.inkFaint, fontSize: 12.5 }}>{PEOPLE_COUNT_LABELS[i]}</Text>
                 <Text style={{ color: colors.ink, fontSize: 13, fontWeight: '700' }}>{price}円 / 人</Text>

@@ -60,7 +60,7 @@ export interface LodgingPlan {
   name: string;
   mealInfo: string;
   paymentMethod: string;
-  pricePerPerson: (number | null)[]; // [1名, 2名, 3名, 4名以上]
+  pricePerPerson: (string | null)[]; // [1名, 2名, 3名, 4名以上]
   photos: string[];
 }
 
