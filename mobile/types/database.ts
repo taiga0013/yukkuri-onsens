@@ -26,6 +26,7 @@ export interface OnsenRow {
   regular_hours: string | null;
   lodger_bath_hours: string | null;
   private_bath_hours: string | null;
+  private_bath_price: string | null;
   rotenburo: boolean;
   sauna: boolean;
   restaurant: boolean;

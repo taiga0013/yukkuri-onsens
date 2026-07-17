@@ -150,7 +150,7 @@ export function OwnerOnsensPage() {
                   </div>
                   <div className="form-row">
                     <label>
-                      日帰り入浴 大人料金（円）
+                      日帰り入浴 大人料金（円・税込）
                       <input
                         type="number"
                         value={edit.price_adult}
@@ -158,7 +158,7 @@ export function OwnerOnsensPage() {
                       />
                     </label>
                     <label>
-                      日帰り入浴 子供料金（円）
+                      日帰り入浴 子供料金（円・税込）
                       <input
                         type="number"
                         value={edit.price_child}

@@ -20,6 +20,7 @@ const emptyForm: OnsenFormValues = {
   regular_hours: '',
   lodger_bath_hours: '',
   private_bath_hours: '',
+  private_bath_price: '',
   rotenburo: false,
   sauna: false,
   restaurant: false,
@@ -255,14 +256,22 @@ export function OnsenFormPage() {
           <legend>日帰り入浴料金・定員</legend>
           <div className="form-row">
             <label>
-              日帰り入浴 大人料金（円）
+              日帰り入浴 大人料金（円・税込）
               <input type="number" value={form.price_adult ?? 0} onChange={(e) => set('price_adult', Number(e.target.value))} />
             </label>
             <label>
-              日帰り入浴 子供料金（円）
+              日帰り入浴 子供料金（円・税込）
               <input type="number" value={form.price_child ?? 0} onChange={(e) => set('price_child', Number(e.target.value))} />
             </label>
           </div>
+          <label>
+            貸し切り風呂の料金
+            <input
+              value={form.private_bath_price ?? ''}
+              onChange={(e) => set('private_bath_price', e.target.value)}
+              placeholder="1組50分 3,000円"
+            />
+          </label>
           <label>
             子供料金の条件
             <input

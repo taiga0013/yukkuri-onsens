@@ -350,8 +350,11 @@ export default function OnsenDetailScreen() {
           <View style={{ gap: 10 }}>
             <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>料金・アクセス</Text>
             <Text style={{ color: colors.ink, fontSize: 14 }}>
-              日帰り入浴料金　大人 {onsen.price.adult}円 / 子供 {onsen.price.child}円
+              日帰り入浴料金　大人 {onsen.price.adult}円（税込） / 子供 {onsen.price.child}円（税込）
             </Text>
+            {onsen.privateBathPrice ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>貸し切り風呂の料金 {onsen.privateBathPrice}</Text>
+            ) : null}
             <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
             {onsen.price.paymentMethod ? (
               <Text style={{ color: colors.inkDim, fontSize: 13 }}>決済方法：{onsen.price.paymentMethod}</Text>
