@@ -18,6 +18,8 @@ const emptyForm: OnsenFormValues = {
   longitude: 0,
   hours: '',
   regular_hours: '',
+  lodger_bath_hours: '',
+  private_bath_hours: '',
   rotenburo: false,
   sauna: false,
   restaurant: false,
@@ -189,15 +191,31 @@ export function OnsenFormPage() {
             </label>
           </div>
           <label>
-            営業時間（日帰り入浴）
-            <input value={form.hours ?? ''} onChange={(e) => set('hours', e.target.value)} placeholder="10:00〜21:00" />
-          </label>
-          <label>
-            通常の営業時間
+            電話対応
             <input
               value={form.regular_hours ?? ''}
               onChange={(e) => set('regular_hours', e.target.value)}
               placeholder="24時間（フロント対応 8:00〜20:00）"
+            />
+          </label>
+          <label>
+            日帰り者の入浴時間
+            <input value={form.hours ?? ''} onChange={(e) => set('hours', e.target.value)} placeholder="10:00〜21:00" />
+          </label>
+          <label>
+            宿泊者の入浴時間
+            <input
+              value={form.lodger_bath_hours ?? ''}
+              onChange={(e) => set('lodger_bath_hours', e.target.value)}
+              placeholder="15:00〜24:00、6:00〜9:00"
+            />
+          </label>
+          <label>
+            貸し切り風呂の営業時間
+            <input
+              value={form.private_bath_hours ?? ''}
+              onChange={(e) => set('private_bath_hours', e.target.value)}
+              placeholder="16:00〜22:00（1組50分制）"
             />
           </label>
         </fieldset>

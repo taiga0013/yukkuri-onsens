@@ -144,7 +144,7 @@ export function OwnerOnsensPage() {
                 <div className="onsen-form" style={{ maxWidth: '100%', marginTop: 10 }}>
                   <div className="form-row">
                     <label>
-                      営業時間（日帰り入浴）
+                      日帰り者の入浴時間
                       <input value={edit.hours} onChange={(e) => setEdit({ ...edit, hours: e.target.value })} />
                     </label>
                   </div>
@@ -236,7 +236,7 @@ export function OwnerOnsensPage() {
               ) : (
                 <>
                   <p className="review-comment">
-                    日帰り入浴 営業時間: {o.hours ?? '未設定'} ／ 大人 {o.price_adult ?? 0}円・子供 {o.price_child ?? 0}円 ／ 定休日:{' '}
+                    日帰り者の入浴時間: {o.hours ?? '未設定'} ／ 大人 {o.price_adult ?? 0}円・子供 {o.price_child ?? 0}円 ／ 定休日:{' '}
                     {o.regular_holiday ?? '未設定'}
                   </p>
                   <div className="review-card-footer">

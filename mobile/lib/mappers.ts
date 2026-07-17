@@ -15,6 +15,8 @@ export function mapOnsenRow(row: OnsenRow): Onsen {
     longitude: row.longitude,
     hours: row.hours ?? '',
     regularHours: row.regular_hours ?? '',
+    lodgerBathHours: row.lodger_bath_hours ?? '',
+    privateBathHours: row.private_bath_hours ?? '',
     features: {
       rotenburo: row.rotenburo,
       sauna: row.sauna,

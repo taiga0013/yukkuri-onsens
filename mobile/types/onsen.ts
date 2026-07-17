@@ -39,6 +39,8 @@ export interface Onsen {
   longitude: number;
   hours: string;
   regularHours: string;
+  lodgerBathHours: string;
+  privateBathHours: string;
   features: OnsenFeatures;
   description: string;
   components: string;

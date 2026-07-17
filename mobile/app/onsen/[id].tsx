@@ -278,9 +278,15 @@ export default function OnsenDetailScreen() {
               {onsen.city}
               {onsen.area}
             </Text>
-            <Text style={{ color: colors.inkDim, fontSize: 13 }}>営業時間（日帰り入浴） {onsen.hours}</Text>
             {onsen.regularHours ? (
-              <Text style={{ color: colors.inkDim, fontSize: 13 }}>通常の営業時間 {onsen.regularHours}</Text>
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>電話対応 {onsen.regularHours}</Text>
+            ) : null}
+            <Text style={{ color: colors.inkDim, fontSize: 13 }}>日帰り者の入浴時間 {onsen.hours}</Text>
+            {onsen.lodgerBathHours ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>宿泊者の入浴時間 {onsen.lodgerBathHours}</Text>
+            ) : null}
+            {onsen.privateBathHours ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>貸し切り風呂の営業時間 {onsen.privateBathHours}</Text>
             ) : null}
 
             <View style={{ marginTop: 8, gap: 8 }}>
