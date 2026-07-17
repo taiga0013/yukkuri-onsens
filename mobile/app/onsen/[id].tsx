@@ -41,6 +41,7 @@ const REPORT_CATEGORIES: { label: string; value: 'spam' | 'abusive' | 'irrelevan
 export default function OnsenDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   const insets = useSafeAreaInsets();
   const { colors, congestion: semantic, radius, type } = useTheme();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -256,7 +257,7 @@ export default function OnsenDetailScreen() {
         <View>
           <PhotoSlider photos={onsen.photos} />
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBack}
             style={[styles.floatBtn, { top: insets.top + 10, left: 14, backgroundColor: colors.bgOverlay }]}
           >
             <Ionicons name="close" size={20} color="#fff" />
@@ -550,7 +551,7 @@ export default function OnsenDetailScreen() {
                 {isFavorite(onsen.id) ? 'お気に入り解除' : 'お気に入り登録'}
               </Text>
             </Pressable>
-            <Pressable onPress={() => router.back()} style={[styles.actionBtn, { backgroundColor: colors.bgRaised, borderColor: colors.rule }]}>
+            <Pressable onPress={goBack} style={[styles.actionBtn, { backgroundColor: colors.bgRaised, borderColor: colors.rule }]}>
               <Ionicons name="close" size={17} color={colors.inkDim} />
               <Text style={{ color: colors.inkDim, fontWeight: '700', fontSize: 13.5 }}>閉じる</Text>
             </Pressable>
