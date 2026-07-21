@@ -376,10 +376,6 @@ export function OnsenFormPage() {
             />{' '}
             現在臨時休業中
           </label>
-          <label>
-            <input type="checkbox" checked={form.is_recommended} onChange={(e) => set('is_recommended', e.target.checked)} />{' '}
-            ホーム画面の「おすすめ」に表示する
-          </label>
         </fieldset>
 
         <fieldset>

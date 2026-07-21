@@ -415,5 +415,3 @@ export const popularRanking = [
   'akakura_kanko_009',
   'yuzawa_komakan_008',
 ];
-
-export const recommended = ['matsunoyama_kyokan_010', 'sakihana_kawazoi_005', 'tochiomata_hyakusai_006'];

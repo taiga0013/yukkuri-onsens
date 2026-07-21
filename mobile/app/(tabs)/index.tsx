@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { OnsenCard } from '../../components/OnsenCard';
@@ -7,12 +8,16 @@ import { useTheme } from '../../constants/theme';
 import { useHomeSections } from '../../hooks/useHomeSections';
 import { useRecentVisits } from '../../hooks/useRecentVisits';
 import { useOnsenData } from '../../context/OnsenDataContext';
+import { sampleRandom } from '../../lib/random';
 
 export default function HomeScreen() {
   const { colors, spacing } = useTheme();
   const { onsens, getCongestion } = useOnsenData();
-  const { recommendedIds, popularIds } = useHomeSections();
+  const { popularIds } = useHomeSections();
   const { visits } = useRecentVisits();
+
+  // ホーム画面を開くたびに全施設からランダムに5件選ぶ（管理者による手動選定は行わない）
+  const recommendedIds = useMemo(() => sampleRandom(onsens, 5).map((o) => o.id), [onsens]);
 
   const findOnsen = (id: string) => onsens.find((o) => o.id === id);
 
