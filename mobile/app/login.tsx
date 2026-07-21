@@ -25,7 +25,7 @@ export default function LoginScreen() {
 
   return (
     <View style={[styles.wrap, { backgroundColor: colors.bg }]}>
-      <Text style={[styles.title, { color: colors.ink, fontSize: type.display }]}>湯めぐり新潟</Text>
+      <Text style={[styles.title, { color: colors.ink, fontSize: type.display }]}>湯っくり</Text>
       <Text style={{ color: colors.inkDim, fontSize: 14, marginTop: 8, marginBottom: 40, textAlign: 'center' }}>
         新潟県の温泉地をめぐり、{'\n'}混雑状況をリアルタイムに確認しよう
       </Text>

@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScreenHeader title="湯めぐり新潟" subtitle="今日はどこの温泉にしましょうか" />
+      <ScreenHeader title="湯っくり" subtitle="今日はどこの温泉にしましょうか" />
       <ScrollView contentContainerStyle={{ padding: 20, gap: 28, paddingBottom: 40 }}>
         <View>
           <SectionHeader title="おすすめの温泉地" subtitle="編集部セレクト" />

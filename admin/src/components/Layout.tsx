@@ -8,7 +8,7 @@ export function Layout() {
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="brand">湯めぐり新潟 {isAdmin ? '管理者ダッシュボード' : 'オーナーダッシュボード'}</div>
+        <div className="brand">湯っくり {isAdmin ? '管理者ダッシュボード' : 'オーナーダッシュボード'}</div>
         <nav className="main-nav">
           {isAdmin ? (
             <>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "湯めぐり新潟",
+    "name": "湯っくり",
     "slug": "yumeguri-niigata",
     "scheme": "yumeguri",
     "version": "1.0.0",
@@ -44,7 +44,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "湯めぐり新潟は、温泉施設への入退場を自動検知して混雑状況をリアルタイムに反映するために位置情報を使用します。",
+          "locationAlwaysAndWhenInUsePermission": "湯っくりは、温泉施設への入退場を自動検知して混雑状況をリアルタイムに反映するために位置情報を使用します。",
           "isIosBackgroundLocationEnabled": true,
           "isAndroidBackgroundLocationEnabled": true
         }
@@ -58,7 +58,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "湯めぐり新潟は、プロフィールアイコンを設定するために写真ライブラリへのアクセスを使用します。"
+          "photosPermission": "湯っくりは、プロフィールアイコンを設定するために写真ライブラリへのアクセスを使用します。"
         }
       ]
     ],

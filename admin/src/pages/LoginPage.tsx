@@ -18,7 +18,7 @@ export function LoginPage() {
   return (
     <div className="centered-page">
       <div className="login-card">
-        <h1>湯めぐり新潟 管理者ダッシュボード</h1>
+        <h1>湯っくり 管理者ダッシュボード</h1>
         <p className="muted">管理者権限を持つGoogleアカウントでログインしてください。</p>
         <button onClick={onClick}>Googleでログイン</button>
         {error ? <p className="error-text">{error}</p> : null}
