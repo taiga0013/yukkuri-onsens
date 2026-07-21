@@ -282,7 +282,9 @@ export default function OnsenDetailScreen() {
             {onsen.regularHours ? (
               <Text style={{ color: colors.inkDim, fontSize: 13 }}>電話対応 {onsen.regularHours}</Text>
             ) : null}
-            <Text style={{ color: colors.inkDim, fontSize: 13 }}>日帰り者の入浴時間 {onsen.hours}</Text>
+            {onsen.hasDayTrip ? (
+              <Text style={{ color: colors.inkDim, fontSize: 13 }}>日帰り者の入浴時間 {onsen.hours}</Text>
+            ) : null}
             {onsen.lodgerBathHours ? (
               <Text style={{ color: colors.inkDim, fontSize: 13 }}>宿泊者の入浴時間 {onsen.lodgerBathHours}</Text>
             ) : null}
@@ -337,6 +339,7 @@ export default function OnsenDetailScreen() {
           <View>
             <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>設備情報</Text>
             <View style={styles.featureGrid}>
+              <FeatureItem icon="waves" label="日帰り入浴" on={onsen.hasDayTrip} />
               <FeatureItem icon="hot-tub" label="露天風呂" on={onsen.features.rotenburo} />
               <FeatureItem icon="fire" label="サウナ" on={onsen.features.sauna} />
               <FeatureItem icon="silverware-fork-knife" label="食事処" on={onsen.features.restaurant} />
@@ -350,15 +353,19 @@ export default function OnsenDetailScreen() {
           {/* 料金・アクセス */}
           <View style={{ gap: 10 }}>
             <Text style={[styles.sectionTitle, { color: colors.inkFaint }]}>料金・アクセス</Text>
-            <Text style={{ color: colors.ink, fontSize: 14 }}>
-              日帰り入浴料金　大人 {onsen.price.adult}円（税込） / 子供 {onsen.price.child}円（税込）
-            </Text>
+            {onsen.hasDayTrip ? (
+              <>
+                <Text style={{ color: colors.ink, fontSize: 14 }}>
+                  日帰り入浴料金　大人 {onsen.price.adult}円（税込） / 子供 {onsen.price.child}円（税込）
+                </Text>
+                <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
+                {onsen.price.paymentMethod ? (
+                  <Text style={{ color: colors.inkDim, fontSize: 13 }}>決済方法：{onsen.price.paymentMethod}</Text>
+                ) : null}
+              </>
+            ) : null}
             {onsen.privateBathPrice ? (
               <Text style={{ color: colors.inkDim, fontSize: 13 }}>貸し切り風呂の料金 {onsen.privateBathPrice}</Text>
-            ) : null}
-            <Text style={{ color: colors.inkFaint, fontSize: 12 }}>{onsen.price.childCondition}</Text>
-            {onsen.price.paymentMethod ? (
-              <Text style={{ color: colors.inkDim, fontSize: 13 }}>決済方法：{onsen.price.paymentMethod}</Text>
             ) : null}
             <Text style={{ color: colors.inkDim, fontSize: 13.5 }}>{onsen.address}</Text>
             <Pressable

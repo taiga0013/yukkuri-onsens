@@ -25,6 +25,7 @@ const emptyForm: OnsenFormValues = {
   sauna: false,
   restaurant: false,
   parking: false,
+  has_day_trip: true,
   has_lodging: false,
   lodging_url: '',
   description: '',
@@ -224,6 +225,9 @@ export function OnsenFormPage() {
         <fieldset>
           <legend>設備</legend>
           <div className="checkbox-row">
+            <label>
+              <input type="checkbox" checked={form.has_day_trip} onChange={(e) => set('has_day_trip', e.target.checked)} /> 日帰り入浴あり
+            </label>
             <label>
               <input type="checkbox" checked={form.rotenburo} onChange={(e) => set('rotenburo', e.target.checked)} /> 露天風呂
             </label>

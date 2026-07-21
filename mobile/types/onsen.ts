@@ -42,6 +42,7 @@ export interface Onsen {
   lodgerBathHours: string;
   privateBathHours: string;
   privateBathPrice: string;
+  hasDayTrip: boolean;
   features: OnsenFeatures;
   description: string;
   components: string;
