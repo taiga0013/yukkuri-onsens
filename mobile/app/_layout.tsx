@@ -33,7 +33,8 @@ function Navigation() {
   const onGenderScreen = pathname === '/onboarding/gender';
   const needsGender = authenticated && profile !== null && !profile.gender_prompted && !onAuthScreen;
   const shouldGoToGender = needsGender && !onGenderScreen;
-  const shouldLeaveGenderScreen = onGenderScreen && !needsGender;
+  // profile取得前（null）はまだ「不要」と確定できないので、性別設定画面からは弾かない
+  const shouldLeaveGenderScreen = onGenderScreen && (!authenticated || (profile !== null && profile.gender_prompted));
 
   return (
     <>
