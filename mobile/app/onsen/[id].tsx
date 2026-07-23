@@ -23,6 +23,13 @@ import type { LodgingPlanRow } from '../../types/database';
 import type { LodgingPlan, Review } from '../../types/onsen';
 import { getCongestionLevel } from '../../types/onsen';
 
+const JUMP_TABS: { path: '/' | '/search' | '/congestion' | '/mypage'; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { path: '/', label: 'ホーム', icon: 'home-outline' },
+  { path: '/search', label: '探す', icon: 'search-outline' },
+  { path: '/congestion', label: '混雑状況', icon: 'speedometer-outline' },
+  { path: '/mypage', label: 'マイページ', icon: 'person-circle-outline' },
+];
+
 type SortMode = 'high' | 'low' | 'newest' | 'oldest';
 const SORTS: { key: SortMode; label: string }[] = [
   { key: 'high', label: '評価が高い順' },
@@ -253,15 +260,9 @@ export default function OnsenDetailScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      <ScrollView bounces={false}>
+      <ScrollView bounces={false} contentContainerStyle={{ paddingBottom: 60 + insets.bottom }}>
         <View>
           <PhotoSlider photos={onsen.photos} />
-          <Pressable
-            onPress={goBack}
-            style={[styles.floatBtn, { top: insets.top + 10, left: 14, backgroundColor: colors.bgOverlay }]}
-          >
-            <Ionicons name="close" size={20} color="#fff" />
-          </Pressable>
           <Pressable
             onPress={() => toggleFavorite(onsen.id)}
             style={[styles.floatBtn, { top: insets.top + 10, right: 14, backgroundColor: colors.bgOverlay }]}
@@ -638,6 +639,27 @@ export default function OnsenDetailScreen() {
         </View>
       </ScrollView>
 
+      <Pressable
+        onPress={goBack}
+        style={[styles.floatBtn, { top: insets.top + 10, left: 14, backgroundColor: colors.bgOverlay }]}
+      >
+        <Ionicons name="close" size={20} color="#fff" />
+      </Pressable>
+
+      <View
+        style={[
+          styles.jumpBar,
+          { backgroundColor: colors.tabBarBg, borderTopColor: colors.rule, paddingBottom: insets.bottom + 8 },
+        ]}
+      >
+        {JUMP_TABS.map((t) => (
+          <Pressable key={t.path} onPress={() => router.replace(t.path)} style={styles.jumpBarItem}>
+            <Ionicons name={t.icon} size={21} color={colors.inkFaint} />
+            <Text style={{ fontSize: 10.5, fontWeight: '600', color: colors.inkFaint, marginTop: 2 }}>{t.label}</Text>
+          </Pressable>
+        ))}
+      </View>
+
       <ActionSheet
         visible={!!menuReview}
         title={menuReview && !isOwnReview(menuReview) ? '通報カテゴリを選択' : undefined}
@@ -756,6 +778,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  jumpBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    paddingTop: 6,
+  },
+  jumpBarItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 4 },
   name: { fontWeight: '800' },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   genderCard: { flexDirection: 'row', padding: 12, borderWidth: 1 },
