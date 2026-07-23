@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 
 import { OnsenCard } from '../../components/OnsenCard';
 import { ScreenHeader } from '../../components/ScreenHeader';
@@ -10,8 +12,11 @@ import { useRecentVisits } from '../../hooks/useRecentVisits';
 import { useOnsenData } from '../../context/OnsenDataContext';
 import { sampleRandom } from '../../lib/random';
 
+const FREE_ONSEN_LIMIT = 9;
+
 export default function HomeScreen() {
-  const { colors, spacing } = useTheme();
+  const { colors, spacing, radius } = useTheme();
+  const router = useRouter();
   const { onsens, getCongestion } = useOnsenData();
   const { popularIds } = useHomeSections();
   const { visits } = useRecentVisits();
@@ -62,10 +67,19 @@ export default function HomeScreen() {
         <View>
           <SectionHeader title="すべての温泉地" subtitle={`新潟県内 ${onsens.length}件`} />
           <View style={{ gap: spacing.md }}>
-            {onsens.map((onsen) => (
+            {onsens.slice(0, FREE_ONSEN_LIMIT).map((onsen) => (
               <OnsenCard key={onsen.id} onsen={onsen} congestion={getCongestion(onsen.id)} />
             ))}
           </View>
+          {onsens.length > FREE_ONSEN_LIMIT ? (
+            <Pressable
+              onPress={() => router.push('/subscription')}
+              style={[styles.moreBtn, { borderColor: colors.accent, borderRadius: radius.lg }]}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={colors.accentStrong} />
+              <Text style={{ color: colors.accentStrong, fontWeight: '700', fontSize: 14 }}>もっとみる</Text>
+            </Pressable>
+          ) : null}
         </View>
       </ScrollView>
     </View>
@@ -83,4 +97,13 @@ function EmptyNote() {
 
 const styles = StyleSheet.create({
   empty: { padding: 20, borderWidth: 1, borderRadius: 12, borderStyle: 'dashed' },
+  moreBtn: {
+    marginTop: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderWidth: 1.5,
+  },
 });

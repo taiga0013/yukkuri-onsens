@@ -56,6 +56,13 @@ function Navigation() {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="subscription"
+          options={{
+            presentation: 'modal',
+            headerShown: false,
+          }}
+        />
       </Stack>
       {requiresLogin ? <Redirect href="/login" /> : null}
       {shouldLeaveAuthScreens ? <Redirect href="/" /> : null}
