@@ -3,6 +3,7 @@ export interface ProfileRow {
   display_name: string;
   avatar_url: string | null;
   gender: 'male' | 'female' | 'unspecified';
+  gender_prompted: boolean;
   role: 'user' | 'owner' | 'admin';
   gps_enabled: boolean;
   notifications_enabled: boolean;

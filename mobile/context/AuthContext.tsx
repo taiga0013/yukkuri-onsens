@@ -23,6 +23,7 @@ const MOCK_PROFILE: ProfileRow = {
   display_name: '湯めぐりユーザー',
   avatar_url: null,
   gender: 'unspecified',
+  gender_prompted: true,
   role: 'user',
   gps_enabled: true,
   notifications_enabled: true,

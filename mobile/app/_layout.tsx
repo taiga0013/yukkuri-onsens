@@ -12,7 +12,7 @@ import { OnsenDataProvider } from '../context/OnsenDataContext';
 
 function Navigation() {
   const { colors, scheme } = useTheme();
-  const { loading, session, isMock } = useAuth();
+  const { loading, session, profile, isMock } = useAuth();
   const pathname = usePathname();
 
   if (loading) {
@@ -29,6 +29,11 @@ function Navigation() {
   // OAuthコールバック直後などでセッション確立済みなのに/loginや/auth/callbackに
   // 留まっている場合はホームへ戻す
   const shouldLeaveAuthScreens = authenticated && onAuthScreen;
+  // 初回ログイン後、性別未設定のうちは混雑の男女別可視化のために設定画面へ誘導する
+  const onGenderScreen = pathname === '/onboarding/gender';
+  const needsGender = authenticated && profile !== null && !profile.gender_prompted && !onAuthScreen;
+  const shouldGoToGender = needsGender && !onGenderScreen;
+  const shouldLeaveGenderScreen = onGenderScreen && !needsGender;
 
   return (
     <>
@@ -41,6 +46,7 @@ function Navigation() {
       >
         <Stack.Screen name="login" />
         <Stack.Screen name="auth/callback" />
+        <Stack.Screen name="onboarding/gender" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="onsen/[id]"
@@ -52,6 +58,8 @@ function Navigation() {
       </Stack>
       {requiresLogin ? <Redirect href="/login" /> : null}
       {shouldLeaveAuthScreens ? <Redirect href="/" /> : null}
+      {shouldGoToGender ? <Redirect href="/onboarding/gender" /> : null}
+      {shouldLeaveGenderScreen ? <Redirect href="/" /> : null}
       <DeviceCapabilities />
     </>
   );
