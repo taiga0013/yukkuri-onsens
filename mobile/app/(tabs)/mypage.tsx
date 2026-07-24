@@ -27,8 +27,8 @@ function formatVisited(iso: string) {
 }
 
 export default function MyPageScreen() {
-  const { colors, spacing, radius, type } = useTheme();
-  const { override, setOverride } = useThemeSettings();
+  const { colors, spacing, radius, type, scheme } = useTheme();
+  const { setOverride } = useThemeSettings();
   const { favoriteIds } = useFavorites();
   const { onsens } = useOnsenData();
   const { visits } = useRecentVisits();
@@ -64,7 +64,7 @@ export default function MyPageScreen() {
       .then(({ count }) => setReviewCount(count ?? 0));
   }, [session]);
 
-  const darkModeOn = override === 'dark';
+  const darkModeOn = scheme === 'dark';
 
   const persist = async (fields: Record<string, unknown>) => {
     if (!isSupabaseConfigured || !supabase || !session) return;
