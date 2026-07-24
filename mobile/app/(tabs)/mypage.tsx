@@ -123,11 +123,11 @@ export default function MyPageScreen() {
         <View style={styles.profileRow}>
           <Pressable onPress={onAvatarPress} disabled={uploadingAvatar}>
             <Image source={{ uri: avatarUri }} style={[styles.avatar, { borderColor: colors.accent }]} />
-            <View style={[styles.editBadge, { backgroundColor: colors.accent }]}>
+            <View style={[styles.editBadge, { backgroundColor: '#fff', borderColor: colors.accent }]}>
               {uploadingAvatar ? (
-                <ActivityIndicator size="small" color={colors.onAccent} />
+                <ActivityIndicator size="small" color={colors.accentStrong} />
               ) : (
-                <Text style={{ fontSize: 10, color: colors.onAccent }}>✎</Text>
+                <Image source={require('../../assets/avatar-edit-badge.png')} style={styles.editBadgeImage} />
               )}
             </View>
           </Pressable>
@@ -283,9 +283,11 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
+    borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  editBadgeImage: { width: 16, height: 16, borderRadius: 8 },
   name: { fontWeight: '700' },
   nameInput: { fontSize: 20, fontWeight: '700', borderBottomWidth: 1.5, paddingVertical: 2, minWidth: 160 },
   statsRow: { flexDirection: 'row', gap: 10 },
