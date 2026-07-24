@@ -63,8 +63,12 @@ export default function OnsenDetailScreen() {
     updateReview: updateReviewRemote,
     deleteReview: deleteReviewRemote,
   } = useReviews(id);
-  const { isCheckedIn, loading: checkinLoading, checkIn, checkOut, isAvailable: checkinAvailable } = useCheckin(id);
+  const { isCheckedIn, loading: checkinLoading, checkIn, checkOut, isAvailable: checkinAvailable } = useCheckin(
+    id,
+    onsen ? { latitude: onsen.latitude, longitude: onsen.longitude } : undefined,
+  );
   const { submitEditSuggestion, submitOwnerApplication, isAvailable: suggestionsAvailable } = useOnsenSuggestions(id);
+  const [checkinNotice, setCheckinNotice] = useState<string | null>(null);
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [sortMode, setSortMode] = useState<SortMode>('newest');
   const [composing, setComposing] = useState(false);
@@ -313,8 +317,12 @@ export default function OnsenDetailScreen() {
                 <Pressable
                   disabled={checkinLoading}
                   onPress={async () => {
+                    setCheckinNotice(null);
                     const { error } = isCheckedIn ? await checkOut() : await checkIn();
-                    if (error) showAlert('エラー', error);
+                    if (error) {
+                      setCheckinNotice(error);
+                      setTimeout(() => setCheckinNotice(null), 3500);
+                    }
                   }}
                   style={[
                     styles.checkinBtn,
@@ -330,6 +338,13 @@ export default function OnsenDetailScreen() {
                     {isCheckedIn ? 'チェックアウトする' : 'チェックインする'}
                   </Text>
                 </Pressable>
+              ) : null}
+
+              {checkinNotice ? (
+                <View style={[styles.checkinNotice, { backgroundColor: colors.danger, borderRadius: radius.md }]}>
+                  <Ionicons name="alert-circle" size={16} color="#fff" />
+                  <Text style={styles.checkinNoticeText}>{checkinNotice}</Text>
+                </View>
               ) : null}
             </View>
           </View>
@@ -800,6 +815,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1.5,
   },
+  checkinNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  },
+  checkinNoticeText: { color: '#fff', fontWeight: '700', fontSize: 13, flex: 1 },
   vDivider: { width: 1, marginHorizontal: 14 },
   sectionTitle: { fontSize: 11.5, letterSpacing: 0.5, textTransform: 'uppercase', fontWeight: '700', marginBottom: 12 },
   featureGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
