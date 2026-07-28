@@ -14,6 +14,8 @@ const STATUS_LABEL: Record<OnsenEditSuggestionRow['status'], string> = {
   pending: '審査中',
   approved: '承認済み',
   rejected: '却下済み',
+  auto_approved: 'AI承認済み',
+  auto_rejected: 'AI却下済み',
 };
 
 const FIELD_LABEL: Record<string, string> = {
@@ -60,10 +62,12 @@ export function EditSuggestionsPage() {
     load();
   }, []);
 
-  const filtered = useMemo(
-    () => (filter === 'all' ? suggestions : suggestions.filter((s) => s.status === filter)),
-    [suggestions, filter],
-  );
+  const filtered = useMemo(() => {
+    if (filter === 'all') return suggestions;
+    if (filter === 'approved') return suggestions.filter((s) => s.status === 'approved' || s.status === 'auto_approved');
+    if (filter === 'rejected') return suggestions.filter((s) => s.status === 'rejected' || s.status === 'auto_rejected');
+    return suggestions.filter((s) => s.status === filter);
+  }, [suggestions, filter]);
 
   const approve = async (s: SuggestionWithMeta) => {
     setBusyId(s.id);
@@ -115,7 +119,15 @@ export function EditSuggestionsPage() {
                 <span>
                   <strong>{s.onsen_name}</strong> ・ 提案者: {s.submitter_name}
                 </span>
-                <span className={`status-badge status-${s.status === 'approved' ? 'visible' : s.status === 'rejected' ? 'removed' : 'pending'}`}>
+                <span
+                  className={`status-badge status-${
+                    s.status === 'approved' || s.status === 'auto_approved'
+                      ? 'visible'
+                      : s.status === 'rejected' || s.status === 'auto_rejected'
+                        ? 'removed'
+                        : 'pending'
+                  }`}
+                >
                   {STATUS_LABEL[s.status]}
                 </span>
               </div>
@@ -127,6 +139,11 @@ export function EditSuggestionsPage() {
                 ))}
               </ul>
               {s.note ? <p className="review-comment">{s.note}</p> : null}
+              {s.ai_reasoning ? (
+                <p className="review-comment" style={{ fontStyle: 'italic' }}>
+                  AIの判断理由: {s.ai_reasoning}
+                </p>
+              ) : null}
               <div className="review-card-footer">
                 <span className="muted">{new Date(s.created_at).toLocaleString('ja-JP')}</span>
                 {s.status === 'pending' ? (

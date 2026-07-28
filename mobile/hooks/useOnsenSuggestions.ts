@@ -18,29 +18,26 @@ export function useOnsenSuggestions(onsenId: string) {
   const submitEditSuggestion = useCallback(
     async (changes: EditSuggestionFields, note: string) => {
       if (!isSupabaseConfigured || !supabase || !session) return { error: 'ログインが必要です' };
-      const { error } = await supabase.from('onsen_edit_suggestions').insert({
-        onsen_id: onsenId,
-        user_id: session.user.id,
-        proposed_changes: changes,
-        note: note.trim() || null,
-      });
-      return { error: error?.message ?? null };
+      const { data, error } = await supabase
+        .from('onsen_edit_suggestions')
+        .insert({
+          onsen_id: onsenId,
+          user_id: session.user.id,
+          proposed_changes: changes,
+          note: note.trim() || null,
+        })
+        .select('id')
+        .single();
+      if (error) return { error: error.message };
+
+      // AIが現在の情報が本当に間違っているかを判断し、間違っていれば自動的に反映する。
+      // 判断できない場合（鍵未設定など）はpendingのまま管理者の手動確認に委ねる。
+      supabase.functions.invoke('evaluate-edit-suggestion', { body: { suggestion_id: data.id } }).catch(() => {});
+
+      return { error: null };
     },
     [onsenId, session],
   );
 
-  const submitOwnerApplication = useCallback(
-    async (message: string) => {
-      if (!isSupabaseConfigured || !supabase || !session) return { error: 'ログインが必要です' };
-      const { error } = await supabase.from('owner_applications').insert({
-        onsen_id: onsenId,
-        user_id: session.user.id,
-        message: message.trim() || null,
-      });
-      return { error: error?.message ?? null };
-    },
-    [onsenId, session],
-  );
-
-  return { submitEditSuggestion, submitOwnerApplication, isAvailable: isSupabaseConfigured };
+  return { submitEditSuggestion, isAvailable: isSupabaseConfigured };
 }

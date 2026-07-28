@@ -67,7 +67,7 @@ export default function OnsenDetailScreen() {
     id,
     onsen ? { latitude: onsen.latitude, longitude: onsen.longitude } : undefined,
   );
-  const { submitEditSuggestion, submitOwnerApplication, isAvailable: suggestionsAvailable } = useOnsenSuggestions(id);
+  const { submitEditSuggestion, isAvailable: suggestionsAvailable } = useOnsenSuggestions(id);
   const [checkinNotice, setCheckinNotice] = useState<string | null>(null);
   const [localReviews, setLocalReviews] = useState<Review[]>([]);
   const [sortMode, setSortMode] = useState<SortMode>('newest');
@@ -85,9 +85,6 @@ export default function OnsenDetailScreen() {
   const [editNote, setEditNote] = useState('');
   const [submittingEdit, setSubmittingEdit] = useState(false);
 
-  const [applyingOwner, setApplyingOwner] = useState(false);
-  const [ownerMessage, setOwnerMessage] = useState('');
-  const [submittingOwner, setSubmittingOwner] = useState(false);
 
   const [lodgingPlans, setLodgingPlans] = useState<LodgingPlan[]>([]);
 
@@ -240,26 +237,13 @@ export default function OnsenDetailScreen() {
       showAlert('送信に失敗しました', error);
       return;
     }
-    showAlert('ご協力ありがとうございます', '修正提案を受け付けました。管理者の確認後に反映されます。');
+    showAlert('ご協力ありがとうございます', 'AIが内容を確認し、正しければ自動的に反映されます。');
     setEditHours('');
     setEditPriceAdult('');
     setEditPriceChild('');
     setEditPhone('');
     setEditNote('');
     setEditingInfo(false);
-  };
-
-  const submitOwnerRequest = async () => {
-    setSubmittingOwner(true);
-    const { error } = await submitOwnerApplication(ownerMessage);
-    setSubmittingOwner(false);
-    if (error) {
-      showAlert('送信に失敗しました', error);
-      return;
-    }
-    showAlert('申請を受け付けました', '管理者の承認をお待ちください。');
-    setOwnerMessage('');
-    setApplyingOwner(false);
   };
 
   return (
@@ -473,11 +457,6 @@ export default function OnsenDetailScreen() {
                       {editingInfo ? '閉じる' : '情報を修正する'}
                     </Text>
                   </Pressable>
-                  <Pressable onPress={() => setApplyingOwner((v) => !v)}>
-                    <Text style={{ color: colors.accentStrong, fontSize: 13, fontWeight: '700' }}>
-                      {applyingOwner ? '閉じる' : 'オーナー申請をする'}
-                    </Text>
-                  </Pressable>
                 </View>
 
                 {editingInfo ? (
@@ -530,31 +509,6 @@ export default function OnsenDetailScreen() {
                     >
                       <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>
                         {submittingEdit ? '送信中…' : '修正を提案する'}
-                      </Text>
-                    </Pressable>
-                  </View>
-                ) : null}
-
-                {applyingOwner ? (
-                  <View style={[styles.composer, { borderColor: colors.rule, backgroundColor: colors.bgRaised, borderRadius: radius.md }]}>
-                    <Text style={{ color: colors.inkFaint, fontSize: 12 }}>
-                      この施設のオーナー様ですか？申請いただくと管理者確認の上、料金・営業時間・休業情報を編集できるようになります。
-                    </Text>
-                    <TextInput
-                      value={ownerMessage}
-                      onChangeText={setOwnerMessage}
-                      placeholder="施設名や役職など、確認用の情報をご記入ください"
-                      placeholderTextColor={colors.inkFaint}
-                      multiline
-                      style={[styles.composerInput, { color: colors.ink, borderColor: colors.rule }]}
-                    />
-                    <Pressable
-                      onPress={submitOwnerRequest}
-                      disabled={submittingOwner}
-                      style={[styles.submitBtn, { backgroundColor: colors.accent, opacity: submittingOwner ? 0.6 : 1 }]}
-                    >
-                      <Text style={{ color: colors.onAccent, fontWeight: '700', fontSize: 13.5 }}>
-                        {submittingOwner ? '送信中…' : '申請する'}
                       </Text>
                     </Pressable>
                   </View>

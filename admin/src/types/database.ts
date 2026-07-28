@@ -113,7 +113,8 @@ export interface OnsenEditSuggestionRow {
   user_id: string;
   proposed_changes: Record<string, string | number>;
   note: string | null;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'auto_approved' | 'auto_rejected';
+  ai_reasoning: string | null;
   created_at: string;
   reviewed_at: string | null;
   reviewed_by: string | null;
