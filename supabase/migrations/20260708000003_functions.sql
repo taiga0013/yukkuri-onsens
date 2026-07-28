@@ -85,7 +85,7 @@ $$;
 grant execute on function public.heartbeat_checkin(uuid) to authenticated;
 
 -- ============================================================
--- ttl_auto_checkout: 最終ハートビートから30分経過したアクティブチェックインを強制退場
+-- ttl_auto_checkout: 最終ハートビートから1時間経過したアクティブチェックインを強制退場
 -- pg_cronで定期実行する
 -- ============================================================
 create function public.ttl_auto_checkout()
@@ -95,9 +95,9 @@ security definer
 set search_path = public
 as $$
   update public.checkins
-    set checked_out_at = last_heartbeat_at + interval '30 minutes'
+    set checked_out_at = last_heartbeat_at + interval '1 hour'
     where checked_out_at is null
-      and last_heartbeat_at < now() - interval '30 minutes';
+      and last_heartbeat_at < now() - interval '1 hour';
 $$;
 
 -- pg_cronが有効な場合のみスケジュール登録（Dashboard > Database > Extensions で
